@@ -2,10 +2,10 @@ project:
   type: book
 
 book:
-  title: "YOUR TITLE"
-  author: "YOUR NAME"
+  title: "Class Project"
+  author: "Stat 3702 Spring 2026"
   date: today
-  repo-url: https://github.com/[YOURACCOUNT]/[YOURREPO]
+  repo-url: https://github.com/jtr13/3702project
   repo-branch: main
   repo-actions: [source, edit, issue]
   chapters:
