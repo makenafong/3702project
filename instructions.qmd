@@ -1,0 +1,51 @@
+# Contributor instructions
+
+This chapter gives you all the information you need to upload your community contribution. **Please read this entire document carefully before making your submission.** Of particular note is the fact that the Quarto book format requires a different `.qmd` format than you're used to, so you must make changes to the beginning of the file as described below before submitting.
+
+## Background
+
+This web site makes use of Quarto to render a collection of `.qmd` files into a nicely formatted online book with chapters and subchapters. Your job will be to submit a slightly modified version of your community contribution `.qmd` file to the GitHub repository where the source files for this web site are stored. On the backend, the admins will divide the chapters into book sections and order them. 
+
+## Submission steps
+
+Workflow: contributing to a repository that you do not have write access to.
+
+1. Fork this repo.
+
+2. Clone your fork.
+
+3. Add an upstream remote.
+
+4. Create a new branch.
+
+5. Copy your `.qmd` file into the new branch from `testproject` or create a new `.qmd` file and copy and paste the content.
+
+6. [OPTIONAL] Add your data to the `data/` folder, if relevant.
+
+7. When ready*, commit and push your work to GitHub and create a pull request..
+
+8. At this point a back and forth will begin with the team managing the pull requests. If you are asked to make changes, simply make the changes on your local branch, save, commit, and push to GitHub. The new commits will be added to your pull request; **you do not need to, and should not, create a new pull request.** (If, based on the circumstances, it does make sense to close the pull request and start a new one, we will tell you.)
+
+
+## Preparing your `.qmd` file
+
+You should only submit **ONE** `.qmd` file. 
+
+1. Create a concise, descriptive name for your file, such as `gardens.qmd` or `housing.qmd`. The words only and joined with underscores, **no white space**. Use `.qmd` not `.Qmd`. In addition, all letters must be **lowercase**. 
+
+2. Completely delete the YAML header (the section at the top of the `.qmd` that includes name, title, date, output, etc.) including the `---` line.
+    
+3. Choose a short, descriptive, human readable title for your project as your title will show up in the table of contents -- look at examples in the panel on the left. Capitalize the first letter only ("sentence case"). On the first line of your document, enter a single hashtag, **followed by a single whitespace**, and then your title. Do not use single `#` headers anywhere else in the document. 
+    
+4. The second line should be blank, followed by your name(s):
+    
+   ```
+   # NYC playgrounds
+ 
+   Your name
+   
+   Your content starts here. 
+   ```
+ 
+5. Your file should **not** contain any of the following: file paths that are unique to your computer `/users/yourname/...`, `getwd()`, `setwd()`, `write()` statements (unless commented out), `install.packages()`
+
