@@ -7,7 +7,7 @@
 .positai
 _book/
 *_cache/
-
-
+*_files/
+*.Rproj
 /.quarto/
 **/*.quarto_ipynb
