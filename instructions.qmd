@@ -6,7 +6,7 @@ This chapter gives you all the information you need to upload your community con
 
 This web site makes use of Quarto to render a collection of `.qmd` files into a nicely formatted online book with chapters and subchapters. Your job will be to submit a slightly modified version of your community contribution `.qmd` file to the GitHub repository where the source files for this web site are stored. On the backend, the admins will divide the chapters into book sections and order them. 
 
-## Submission steps
+## Submitting your first pull request
 
 Workflow: contributing to a repository that you do not have write access to.
 
@@ -49,3 +49,8 @@ You should only submit **ONE** `.qmd` file.
  
 5. Your file should **not** contain any of the following: file paths that are unique to your computer `/users/yourname/...`, `getwd()`, `setwd()`, `write()` statements (unless commented out), `install.packages()`
 
+## Submitting subsequent pull requests
+
+1. ONCE: Please follow the instructions [in this issue](https://github.com/jtr13/3702project/issues/23) to sync with the newly reduced size repo.
+
+2. IN GENERAL: after a previous pull request is merged, sync your fork (I recommend following the instructions for doing so in the terminal, *not* using the "Sync fork" button), delete your old branch (remote and local), stop tracking the old branch, create a new branch and follow the usual procedure described above for doing work and submitting a new pull request.
