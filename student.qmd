@@ -222,6 +222,10 @@ ggplot(questions, aes(x = questions_median, y = topic)) +
   theme(legend.position = "none")
 ```
 
+Across the nine topics, students rated "Diversity, Equity, & Inclusion (DEI)" most positively, followed by "Student-Teacher Trust", "Safety", and "Guidance", and rated "Academic Press" most negatively, followed by "Emotionally Well-Being". The results indicate that students from NYC public schools generally perceived their schools as respectful, supportive, and trustworthy. However, more students disagreed than agreed that they were intellectually challenged in class and reported more negative than positive emotions. One possible explanation is that 2021 was still during the COVID-19 pandemic, so courses were mostly held online, and public emotions were generally lower because people couldn’t socialize as usual.
+
+Another pattern worth noting is that, for the two lowest topics, the within-topic differences are noticeable, ranging from negative percentages of agreeableness to nearly 80-90%, suggesting that students had substantially different understandings across the questions designed to measure "Academic Press" and "Emotional Well-Being". Therefore, let's create two bar charts for these topics to closely examine which questions were the most concerning to NYC students.
+
 
 ### Question 2: do the five boroughs differ in students' perceptions of climate, and if so, on which dimensions?
 
