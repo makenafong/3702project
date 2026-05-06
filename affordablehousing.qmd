@@ -3,13 +3,14 @@
 Makena Fong
 
 ## Introduction
-I selected this data set because I wanted to learn more about the distribution of affordable housing in New York City. I want to learn more about where affordable housing is offered throughout the different boroughs. I'm curious to see if there are concentrations of affordable housing in certain areas. There are 2 different programs that have ocurred between 2014 and today. Housing New York plan (1/1/2014-12/31/2021) and the Housing Our Neighbors: A Blueprint for Housing & Homelessness plan (1/1/2022-present). These plans help to improve the quality of housing, support people experiencing homelessness, and increase homeownership opportunities.  Source: https://www.nyc.gov/site/hpd/about/housing-blueprint.page
+Recently, I have been highly involved in the process of looking for an apartment and deciding whether it is best to stay in on campus housing or move off campus. Housing in New York City is so expensive, it is typical for people to have roommates or turn living rooms into additional bedrooms. I decided to look at the Affordable Housing data set because I know so many people struggle to afford rent. I wanted to see what assistance the city provides to low income families to help them stay in NYC. I wanted to learn more about the distribution of affordable housing in New York City. Since 2014, there have been 2 different programs to help create more affordable housing. They are the Housing New York plan (1/1/2014-12/31/2021) and the Housing Our Neighbors: A Blueprint for Housing & Homelessness plan (1/1/2022-present). These plans help to improve the quality of housing, support people experiencing homelessness, and increase homeownership opportunities.  
+Source: https://www.nyc.gov/site/hpd/about/housing-blueprint.page
 
 ## Data
 ### Description
-This data is collected through various Housing Preservation and Development programs. Each row contains one buildings in a specific housing development or preservation project. Each column contains details about the location of the building,  when construction occurred on the building, details about the number of units divided into income level, and the number of bedrooms. This dataset is 8,983 rows and 41 columns. It is updated quarterly and was last updated March 20th, 2026. 
+This data is collected through various Housing Preservation and Development programs. Each row contains one buildings in a specific housing development or preservation project. Each column contains details about the location of the building, when construction began, details about the number of units divided by target income level, and the number of bedrooms. This data set is 8,983 rows and 41 columns. It is updated quarterly and was last updated March 20th, 2026. 
 
-This data does duplicate buildings if it was involved in multiple projects. There are also some projects that were created to assist homeowners or special populations that are marked CONFIDENTIAL so we don't have all of the data for certain projects. In addition many of the projects are still in progress so there is no building completion or project completion date. 
+This data does have duplicate buildings if it was involved in multiple projects. There are also some projects that were started to assist homeowners or special populations that are marked "CONFIDENTIAL" so we don't have all of the data for certain projects. In addition many of the projects are still in progress so there is no building completion or project completion date. 
 
 ### Missing Value Analysis
 
@@ -23,36 +24,74 @@ df <- read_csv("data/affordablehousing.csv")
 library(redav)
 plot_missing(df, num_char = 10, max_cols = 13, max_rows = 5)
 ```
-From this graph, we can see that a majority of the columns with missing data contain no information about the location of the project, but do have a date project and building completion date. This helps to verify the statement in the introduction of the data set that there are projects labeled as "CONFIDENTIAL" with redacted information. The next row with the most missing data is those with information about the location but no project and building completion date. 
+From this graph, we can see that a majority of the columns with missing data contain no information about the location of the project, but do have a date project and building completion date. This helps to verify the statement in the introduction of the data set that there are projects labeled as "CONFIDENTIAL" where details about the location of the building and any other details that could be traced back to the project itself are hidden. The next row with the most missing data is those with information about the location but no project and building completion date, which again makes sense as projects started more recently are not complete yet. 
 ```{r}
-missing <- df |> filter(is.na(`Building ID`)) |> pivot_longer(cols = c(`Counted Rental Units`, `Counted Homeownership Units`), names_to = "Type", values_to = "Counted Units") |> aggregate(`Counted Units` ~ Type, FUN = sum)
+missing <- df |> 
+  filter(is.na(`Building ID`)) |> 
+  rename(`Rental Units` = `Counted Rental Units`, `Homeownership Units` = `Counted Homeownership Units`)|> 
+  pivot_longer(cols = c(`Rental Units`, `Homeownership Units`), names_to = "Type", values_to = "Counted Units") |> 
+  aggregate(`Counted Units` ~ Type, FUN = sum)
+
 ggplot(missing, aes(x = Type, y = `Counted Units`)) + 
-  geom_col()
+  geom_col() + 
+  labs(
+    title = "Number of Units with Missing Data by Unit Type",
+    y = "Number of Units",
+    x = "Unit Type"
+  )
 
 ```
 
 From this graph we can see that a majority of the projects with missing data are projects that involve homeownership units. This also helps us to verify the statement provided in the data set introduction that some information was redacted because it was related to homeownership. 
 ```{r}
-missing_rental <- df |> filter(is.na(`Building ID`),`Counted Rental Units` > 0 ) |> select(`Extremely Low Income Units`:`Other Income Units`) |> pivot_longer(cols = c(`Extremely Low Income Units` : `Other Income Units`), names_to = "Income", values_to = "Counted Units") |> aggregate(`Counted Units`~ Income, FUN = sum)
-ggplot(missing_rental, aes(y = fct_reorder(Income, `Counted Units`), x = `Counted Units`)) + 
-  geom_col()
-```
-From the introduction we know that some information was considered confidential because it was related to a "special population". Based on our graph of the rental units with redacted information based on income level, we can see that a majority of the rental units with redacted information are "Extremely Low Income Units".
+missing_rental <- df |> 
+  filter(is.na(`Building ID`),`Counted Rental Units` > 0 ) |> 
+  select(`Extremely Low Income Units`:`Other Income Units`) |> 
+  pivot_longer(cols = c(`Extremely Low Income Units` : `Other Income Units`), names_to = "Income", values_to = "Counted Units") |> 
+  aggregate(`Counted Units`~ Income, FUN = sum)
 
-maybe also need to add one about dates i lowkey dont know just be like oh these started more recently so they're not done duh
-```{r}
-unfinished <- df |> filter(is.na(`Project Completion Date`)) |> mutate(`Project Start Date` = as.Date(`Project Start Date`, format = "%m/%d/%Y")) |> mutate(`Project Start Date` = format(`Project Start Date`, "%Y")) |> count(`Project Start Date`, name = "unfinished count")
-finished <- df |> filter(!is.na(`Project Completion Date`)) |> mutate(`Project Start Date` = as.Date(`Project Start Date`, format = "%m/%d/%Y")) |> mutate(`Project Start Date` = format(`Project Start Date`, "%Y")) |> count(`Project Start Date`, name = "finished count")
-compare <- left_join(unfinished, finished) |> pivot_longer(cols = `unfinished count`:`finished count`, names_to = "done", values_to = "count") |> group_by(`Project Start Date`) |>
-  mutate(prop = count / sum(count, na.rm = TRUE))
-ggplot(compare, aes(x = `Project Start Date`, y = prop, fill = done))+ 
+ggplot(missing_rental, aes(y = fct_reorder(Income, `Counted Units`), x = `Counted Units`)) + 
   geom_col() + 
-  scale_fill_discrete(direction = -1)
+  labs(
+    title = "Rental Units with Missing Data by Target Income Level",
+    y = "Target Income Level",
+    x = "Number of Units"
+  )
 ```
+From this graph we can see that most of the rental units with missing data are "Extremely Low Income Units". In the data set introduction we know that some information was considered confidential because it was related to a "special population". We can say that the special population is likely those who have extremely low income. 
+
+
+```{r}
+unfinished <- df |> 
+  filter(is.na(`Project Completion Date`)) |>
+  mutate(`Project Start Date` = as.Date(`Project Start Date`, format = "%m/%d/%Y")) |> 
+  mutate(`Project Start Date` = format(`Project Start Date`, "%Y")) |> 
+  count(`Project Start Date`, name = "Unfinished")
+
+finished <- df |> 
+  filter(!is.na(`Project Completion Date`)) |> 
+  mutate(`Project Start Date` = as.Date(`Project Start Date`, format = "%m/%d/%Y")) |> 
+  mutate(`Project Start Date` = format(`Project Start Date`, "%Y")) |> 
+  count(`Project Start Date`, name = "Finished")
+
+compare <- left_join(unfinished, finished) |> 
+  pivot_longer(cols = `Unfinished`:`Finished`, names_to = "Completion Status", values_to = "count") |> 
+  group_by(`Project Start Date`) |>
+  mutate(prop = count / sum(count, na.rm = TRUE))
+
+ggplot(compare, aes(x = `Project Start Date`, y = prop, fill = `Completion Status`))+ 
+  geom_col() + 
+  scale_fill_discrete(direction = -1) + 
+  labs(
+    title = "Project Completion Status by Start Year",
+    y = "Proportion Completed",
+    x = "Project Start Year"
+  )
+```
+From this graph we can see that as the start year gets closer and closer to today, the proportion of incomplete projects increases. There is also a slight peak in 2018 and a dip in 2019 of the number of projects that remain unfinished. 
 
 ## Results
-### Question 1
-Distribution of location of housing across neighborhoods
+### Question 1: Where are Affordable Housing Projects Located Across New York City?
 ```{r}
 library(sf)
 boroughs <- read_sf("data/nyc_boroughs/nybb.shp")
@@ -66,7 +105,7 @@ ggplot() +
   theme_minimal()
 
 ```
-We can see there is a high concentration of affordable housing projects in the Bronx. Not too many in Lower Manhattan on the west side or by FIDI. Very spread out in Queens and barely any in Staten Island. There is however a large clump in the north eastern part of Brooklyn. 
+We can see there is a high concentration of affordable housing projects in the Bronx. Not too many in Lower Manhattan on the west side or by FIDI, with a higher concentration in the East Village/Stuyvesant Town area. Projects are more spread out in Queens and there are very few projects in Staten Island. Additionally there is a large concentration of projects in the North-Eastern part of Brooklyn which would make sense as that area is highly residential. 
 
 ```{r}
 pop <- read_csv("data/nyc_pop.csv", col_select = c(Borough, `2020 - Boro share of NYC total`)) |> filter(Borough != "NYC Total")
