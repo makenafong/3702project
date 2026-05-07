@@ -1,8 +1,9 @@
-# 2015 Tree Census
+# 2015 Street Tree Census
 
 Alexander Liu
 
 ## Introduction
+New York City is known for its iconic skyline, but it is also home to more than 680,000 trees. I chose to explore this dataset because NYC is one of the major cities with the most extensive canopies. We often walk past these trees without considering the value that they provide to the city; they improve the air quality, manage stormwater, and provide psychological support to millions of residents. My goal was to use data to uncover specific patterns of the life that brings our city streets to life.
 
 ```{r}
 #| warning: false
@@ -14,12 +15,38 @@ library(redav)
 
 ## Data
 ### Description
+The data is sourced from the [2015 Tree Census](https://data.cityofnewyork.us/Environment/2015-Street-Tree-Census-Tree-Data/uvpi-gqnh/about_data), where thousands of volunteers mapped every tree in the city between May 2015 and October 2016. It is a snapshot census that takes place every 10 years, and the [next census cycle for 2025 is currently in progress](https://www.nycgovparks.org/reg/trees-count).
+
+The raw data is provided by NYC Open Data in the form of an 88 megabyte CSV. The full dataset includes 45 columns (variables) and 683,788 rows (trees). To ensure that the dataset would be small enough to function in the class repository, I converted it into a .rds file and slimmed it down to 8 vital variables:
+
+- `tree_dbh`: Diameter of the tree, measured at approximately 54" / 137cm above the ground.
+
+- `status`: Indicates whether the tree is alive, standing dead, or a stump.
+
+- `health`: Indicates the user's perception of tree health. (Good, Fair, Poor)
+
+- `spc_common`: Common name for species, e.g. "red maple"
+
+- `postcode`: Five-digit zipcode in which tree is located
+
+- `borocode`: Code for borough in which tree point is located: 1 (Manhattan), 2 (Bronx), 3 (Brooklyn), 4 (Queens), 5 (Staten Island)
+
+- `latitude`: Latitude of point, in decimal degrees
+
+- `longitude`: Longitude of point, in decimal degrees
 
 ### Missing Value Analysis
 ```{r}
 #| warning: false
-df <- read_csv("data/2015_Tree.rds", show_col_types = FALSE)
+df <- readRDS("data/2015_Tree.rds")
 # head(df)
+```
+From looking through the data, I noticed that the NA's were not showing up as NA's, and instead as empty whitespace strings. I have to convert these empty strings to traditional NA's.
+
+```{r}
+# converting empty strings to traditional NA's
+df <- df %>%
+  mutate(across(where(is.character), ~na_if(., "")))
 
 # filter only missing values to avoid cluttering
 df_missing <- df %>%
@@ -27,17 +54,56 @@ df_missing <- df %>%
 
 plot_missing(df_missing, percent = FALSE)
 ```
+The result of the missing analysis is that there are three main patterns. Pattern 2 looks interesting, taking up almost every single missing case. Digging deeper into the data, I notice that these cases are all cases where the tree is either dead or a stump, noted in the `status` variable.
 
+```{r}
+df_missing2 <- df %>%
+  filter(!(is.na(spc_common) & is.na(health)))
+
+plot_missing(df_missing2, percent = FALSE)
+```
+Removing the second pattern, I find that there are only five instances of missing `spc_common` (probably an unidentifiable tree) and two cases of missing `health`. In the grand scheme of things, these six trees will not impact our data significantly, so I am going to go forward with these six cases removed, while keeping pattern 2.
+
+```{r}
+df_cleaned <- df %>%
+  filter(!(is.na(spc_common) & !is.na(health))) %>%
+  filter(!(!is.na(spc_common) & is.na(health)))
+```
 
 ## Results
 ```{r}
-df %>%
+df_cleaned %>%
   count(spc_common, sort = TRUE) %>%
   head(15) %>%
+  na.omit() %>%
   ggplot(aes(x = reorder(spc_common, n), y = n)) +
   geom_col() +
   coord_flip()
 ```
+Simple exploratory bar chart of the top 15 tree species.
+
+### Which Postcodes Have the Most Variety of Trees?
+```{r}
+borough_map <- c("1" = "Manhattan", "2" = "Bronx", "3" = "Brooklyn", "4" = "Queens", "5" = "Staten Island")
+
+postcode_variety <- df_cleaned %>%
+  group_by(postcode) %>%
+  summarize(unique_count = n_distinct(spc_common, na.rm = TRUE)) %>%
+  slice_max(unique_count, n = 10)
+
+ggplot(postcode_variety, aes(x = unique_count,                              y = fct_reorder(as.character(postcode), unique_count))) +
+  geom_point(color = "forestgreen", size = 3) +
+  theme_minimal() + 
+  theme(panel.grid.minor = element_blank()) +
+  scale_x_continuous(limits = c(110, 125)) +
+  labs(
+    title = "Top 10 Most Biodiverse Postcodes",
+    x = "Number of Unique Species",
+    y = "Postcode"
+  )
+```
+Interestingly, four of the top 10 postcodes are close to each other and on Staten Island (10312, 10314, 10306, and 10305). These neighborhoods have larger front yards and less urban development in general, allowing a larger variety of trees to survive. Likewise, the five Queens postcodes belong to areas with low-density residential housing. (I actually went to Forest Hills High School in 11375.) Notably, there is not a single postcode in the top 10 that belong to the Bronx or Manhattan.
+
 
 ```{r}
 boroughs <- read_sf("data/nyc_boroughs/nybb.shp")
@@ -52,7 +118,6 @@ points_sf <- df %>%
   select(longitude, latitude, spc_common) %>%
   na.omit() %>%
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
-
 
 ggplot() + 
   geom_sf(data = boroughs) +
@@ -118,7 +183,6 @@ ggplot(top15_species, aes(x = fct_reorder(spc_common, avg_dbh),
 ```
 
 
-### Question 1
 
 ### Question 2
 
