@@ -74,7 +74,7 @@ plot_missing(
   num_char = 8
 )
 ```
-Which graph should I use??
+Which graph should I use?
 
 
 ```{r}
