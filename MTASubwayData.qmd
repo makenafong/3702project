@@ -24,7 +24,7 @@ Both datasets are pretty clean. The delays dataset has no missing values at all.
 
 ```{r}
 library(tidyverse)
-ridership <- read.csv("data/mta_hourly_ridership.csv") |>
+ridership <- read.csv("data/hourlyridership.csv") |>
   mutate(
     transit_timestamp = mdy_hms(transit_timestamp),
     hour = hour(transit_timestamp),
@@ -165,7 +165,7 @@ Transfers here count riders who entered the subway via a free bus-to-subway or o
 
 ```{r}
 library(sf)
-nyc <- st_read("data/nybb.shp")
+nyc <- st_read("data/nybb1.shp")
 nyc <- st_transform(nyc, crs = 4326)
 
 station_total <- ridership |>
@@ -198,7 +198,7 @@ Ridership is heavily concentrated in Midtown Manhattan, shown by the darkest red
 ### What Is Causing Subway Delays?
 
 ```{r}
-delays <- read_csv("data/MTA_Subway_Trains_Delayed__Beginning_2020_20260502.csv")
+delays <- read_csv("data/mtadelays.csv")
 
 cause_totals <- delays |>
   group_by(line, reporting_category) |>
