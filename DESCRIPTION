@@ -13,6 +13,7 @@ Imports:
     redav,
     rmarkdown,
     sf,
+    tidycensus,
     tidyverse,
     tigris
 Remotes: 
