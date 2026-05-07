@@ -70,7 +70,7 @@ nybb <- nybb |>
 ```
 
 ```{r}
-graph1 <- ggplot(arrests, aes(x = arrest_boro), fill = arrest_boro) +
+graph1 <- ggplot(arrests, aes(x = arrest_boro, fill = arrest_boro)) +
   geom_bar() +
   theme_minimal()
 ```
