@@ -4,39 +4,59 @@ By: Jade Amaya
 
 ## Introduction
 
-I was inspired to select the NYPD Arrest (Historic) Data in lieu of other courses that discuss psychology, law, and history. I’m interested in studying the demographics of people arrested in NYC, specifically their demographics. Some questions I hope to answer are: What groups of people are being arrested the most? What are the trends of arrests? What types of crimes are people arrested for? Where are most of these arrests happening?
+Hi everyone, welcome to my project! This project looks at NYPD Arrest Data (YTD) and examines the relationships between arrests, location, demographic characteristics, and other crime indicators. I use precinct-level aggregated data to analyze how arrest patterns vary across NYC and how they relate to complaints, shootings, and race with respect to arrests. I wanted to look at this data set (and related ones) because I have a broader interest in how policing and crime intersect with historical patterns in law enforcement, specifically in the U.S. Some historical context motivating my project is related to slavery patrol systems during the antebellum period that were replaced by modern police systems during the Jim Crow era to reinforce segregation, and recently (as in a few years ago) stop-and-frisk in the late 20th to early 21st century. Amid this context, I use the following datasets (refer to Data Description) to look at statistical relationships that may tell a story as to how arrests are distributed across NYC during this time.
 
 ## Data
 
 ### Description
 
-The data was collected by the NYPD and published by NYC’s Open Data team. The data was imported, using an API from the NYPD Arrest (Year to Date) Data set. The dataframe contains 19 columns and 1000 rows. The data is updated every year some time during mid to late April. Some limitations of this dataset is that by using an API, only 1000 rows can be imported at a time, there is no data provided that informs us whether or not these arrested people were let go, whether they were scheduled a trial, or whether some of these arrests pertain to the same individual; that some demographic information pertaining to individuals are missing; and that even though these people were arrested, cannot say for certain all actually committed the crime.
+The data was collected by the NYPD and published by NYC’s Open Data team. The data was imported, using an csv file from the NYPD Arrest (Year to Date) Data set. The dataframe contains 19 columns and 63.5k rows. The data is updated every year some time during mid to late April. Another dataset that I use in this project is also NYPD Complaint data, using an API. To control for time, both datasets are filtered to only include data from this year (1/1/26 - 3/31/26). Some limitations of this dataset is that there is no data provided that informs us whether or not these arrested people were let go, whether they were scheduled a trial, or whether some of these arrests pertain to the same individual; that some demographic information pertaining to individuals are missing; and that even though these people were arrested, cannot say for certain all actually committed the crime.
 
-Here is a link to the dataset: [link](https://data.cityofnewyork.us/Public-Safety/NYPD-Arrest-Data-Year-to-Date-/uip8-fykc/about_data)
+Here are the links to the datasets:
+
+[NYPD Arrests](https://data.cityofnewyork.us/Public-Safety/NYPD-Arrest-Data-Year-to-Date-/uip8-fykc/about_data)
+
+[NYPD Complaints](https://data.cityofnewyork.us/Public-Safety/NYPD-Complaint-Data-Current-Year-To-Date-/5uac-w243/about_data)
 
 ### Missing Value Analysis
 
 ```{r}
-#| warining: false
-#| echo: false
 library(tidyverse)
-df <- read_csv("https://data.cityofnewyork.us/resource/uip8-fykc.csv?$limit=69000", na = c("(null)", ""))
+library(sf)
+library(readxl)
+library(patchwork)
+arrests <- read_csv("data/arrests.csv", na = c("(null)", ""))
 ```
 
 ```{r}
+arrests <- arrests |>
+  mutate(mdydate = mdy(ARREST_DATE)) |>
+  rename(perp_sex = PERP_SEX, age = AGE_GROUP, pd_desc = PD_DESC,
+         arrest_key = ARREST_KEY, law_cat_cd = LAW_CAT_CD,
+         law_code = LAW_CODE, x_coord_cd = X_COORD_CD, y_coord_cd = Y_COORD_CD,
+         ky_cd = KY_CD, jurisdiction_code = JURISDICTION_CODE, 
+         ofns_desc = OFNS_DESC, arrest_boro = ARREST_BORO, 
+         arrest_precinct = ARREST_PRECINCT, perp_race = PERP_RACE,
+         pd_cd = PD_CD, longitude = Longitude, latitude = Latitude)
+```
+
+```{r}
+#| fig-width: 8
 #| warning: false
 library(redav)
-df_new <- df |>
-  select(starts_with(c("perp_sex", "age", "pd_d", "k", "o", "law_", "pd_c")))
-colnames(df_new) <- str_remove_all(colnames(df_new), "PE")
-plot_missing(df_new)
+arrests_new <- arrests |>
+  select(starts_with(c("perp_sex", "age", "pd_d", "k", "o", "law_", "pd_c", "arrest_key")))
+colnames(arrests_new) <- str_remove_all(colnames(arrests_new), "PE")
+plot_missing(arrests_new)
 ```
 
 Most of the rows in the dataset contained no missing values. Above the graph shows that the second most common pattern had sex and age group missing values. The third pattern included all other columns without missing values, but the level of defense.
 
 ## Results
 
-### Where are arrests concentrated?
+### Topic 1: Location of Arrests 
+
+#### Where are arrests concentrated?
 
 ```{r}
 #|warning: false
@@ -47,93 +67,58 @@ nybb <- nybb |>
   mutate(BoroCode = recode(BoroCode, `1` = "M", `2` = "B", `3` = "K",
                            '4' = "Q", '5' = "S")) |>
   rename(arrest_boro = BoroCode)
-
-df <- read_csv("https://data.cityofnewyork.us/resource/uip8-fykc.csv?$limit=69000", na = c("(null)", ""))
 ```
 
 ```{r}
-#| message: false
-points_sf <- df |> 
- select(longitude, latitude, arrest_boro) |> 
-  na.omit() |> 
-  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) 
-ggplot() + 
- geom_sf(data = nybb) +
-  geom_sf(data = points_sf, size = .1, aes(color = arrest_boro)) +
+graph1 <- ggplot(arrests, aes(x = arrest_boro, fill = arrest_boro)) +
+  geom_bar() +
   theme_minimal()
 ```
 
-### What are the top crimes people are allegedly arrested for?
 
 ```{r}
-ggplot(df, aes(y = fct_rev(fct_infreq(law_cat_cd)), fill = law_cat_cd)) + 
-  geom_bar() +
- scale_fill_brewer(palette = "Set2") +
+#| message: false
+points_sf <- arrests |> 
+ select(longitude, latitude, arrest_boro) |> 
+  na.omit() |> 
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) 
+graph2 <- ggplot() + 
+ geom_sf(data = nybb) +
+  geom_sf(data = points_sf, size = .1, aes(color = arrest_boro)) +
   theme_minimal() +
-  labs(title = "Arrests by Crime Type",
-       x = "Count",
-       y = "Offense")
+  theme(legend.position = "none")
 ```
 
 ```{r}
-library(ggplot2)
-library(forcats)
-
-ggplot(df, aes(y = law_cat_cd)) + 
-  geom_bar(aes(y = fct_rev(fct_infreq(law_cat_cd)), fill = perp_race)) +
-  theme_minimal() +
- scale_fill_brewer(palette = "Set1") +
-  labs(title = "Arrests in NYC by Crime", x = "count", 
-       y = "Offense", fill = "Race")
+#| fig-length: 5
+#| fig-width: 10
+graph2 + graph1
 ```
 
 
-
-The graph represents the total counts of crime type by race, compared across gender groups, where NA was a non-specified sex. The crime codes are the following: F (felony); M (misdemeanor); V (violation); 9 (infraction).
-
-### Who is being disproportionately arrested?
-
 ```{r}
-library(ggplot2)
-library(forcats)
-ggplot(df, aes(y = perp_race)) + 
-  geom_bar(aes(y = fct_rev(fct_infreq(perp_race)), fill = perp_sex)) +
-  theme_minimal() +
-  labs(title = "Arrests in NYC by Race and Gender", x = "count", y = "Race", fill = "Sex")
-```
-The graph above presents a bar graph of the distribution of arrests by race,
-each broken up by gender. People who identify as black are substantively
-arrested more than people who identify as another race, with white hispanics
-as the second highest arrested racial group. Within each racial
-category, people who identify as males are also arrested at substantively
-greater rate than people who identify as females.
-
-```{r}
-library(tidyverse)
-library(sf)
-library(readxl)
-
-
 
 nypp <- read_sf("nypp_25c/nypp.shp")
+arrests <- read_csv("data/arrests.csv", na = c("(null)", ""))
 
-df <- df |>
-  rename(Precinct = arrest_precinct)
+arrests <- arrests |>
+  mutate(arrest_date = mdy(ARREST_DATE)) |>
+  rename(perp_sex = PERP_SEX, age = AGE_GROUP, pd_desc = PD_DESC,
+         arrest_key = ARREST_KEY, law_cat_cd = LAW_CAT_CD,
+         law_code = LAW_CODE, x_coord_cd = X_COORD_CD, y_coord_cd = Y_COORD_CD,
+         ky_cd = KY_CD, jurisdiction_code = JURISDICTION_CODE, 
+         ofns_desc = OFNS_DESC, arrest_boro = ARREST_BORO, 
+         Precinct = ARREST_PRECINCT, perp_race = PERP_RACE,
+         pd_cd = PD_CD, longitude = Longitude, latitude = Latitude)
 
-newer <- left_join(nypp, df) |>
-  select(c("Precinct", "perp_race", "Shape_Leng", "Shape_Area", "geometry")) |>
+newer <- left_join(nypp, arrests) |>
+  select(c("Precinct", "perp_race", "Shape_Leng", "Shape_Area", "geometry", "arrest_date")) |>
   group_by(perp_race, Precinct) |>
   summarise(race_count = n())
-
-ggplot(newer) +
-  geom_sf(aes(fill = perp_race)) + 
-  geom_sf_text(aes(label = Precinct), size = 2, color = "white")  +
-  theme_void() +
-  facet_wrap(vars(perp_race))
 ```
 
 ```{r}
-newdata <- left_join(nypp, df) |>
+newdata <- left_join(nypp, arrests) |>
   select(c("Precinct", "perp_sex", "Shape_Leng", "Shape_Area", "geometry")) |>
   filter(perp_sex == "M") |>
   group_by(Precinct) |>
@@ -148,95 +133,159 @@ male <- ggplot(newdata) +
   theme_void() 
 ```
 
-```{r}
-library(patchwork)
+### Topic 2: Arrests and Indicators of Crime Across Precincts
 
-women <- left_join(nypp, df) |>
-  select(c("Precinct", "perp_sex", "Shape_Leng", "Shape_Area", "geometry")) |>
-  filter(perp_sex == "F") |>
-  group_by(Precinct) |>
-  summarise(Female = n())
-
-female <- ggplot(women) +
-  geom_sf(aes(fill = Female)) + 
-  geom_sf_text(aes(label = Precinct), size = 2,
-               color = "white") +
-   scale_fill_gradient(low = "darkblue", high = "lightblue",
-                     na.value = "grey70") +
-  theme_void()
-
-female | male
-```
-At a glance, the maps look similar when comparing male and female arrestees
-across precincts. However, we already established that males arrests were
-substantively larger than the amount of female arrests.
-However, if you look at the colors, you can see they are similar 
-in color, which may suggest there is some sort of underlying pattern beyond
-gender. In other words, there is not a strong association between gender and location,
-because it looks like both male and females are arrested at higher rates in
-certain precincts. Maybe there is some other variable that can explain why
-within the precincts that are lighter result in higher arrest counts of each
-gender.
-
+#### What is the association between the number of crime complaints and arrests across precincts?
 
 ```{r}
-white <- left_join(nypp, df) |>
-  select(c("Precinct", "perp_race", "Shape_Leng", "Shape_Area", "geometry")) |>
-  filter(perp_race == "WHITE") |>
-  group_by(Precinct) |>
-  summarise(
-    white_count = n())
-
-black <- left_join(nypp, df) |>
-  select(c("Precinct", "perp_race", "Shape_Leng", "Shape_Area", "geometry")) |>
-  filter(perp_race == "BLACK") |>
-  group_by(Precinct) |>
-  summarise(
-    black_count = n())
-
-g1 <- ggplot(white) +
-  geom_sf(aes(fill = white_count)) + 
-  geom_sf_text(aes(label = Precinct), size = 2,
-               color = "white")  +
-  labs(fill = "White Arrestees") +
-  theme_void()
-
-g2 <- ggplot(black) +
-  geom_sf(aes(fill = black_count)) + 
-  geom_sf_text(aes(label = Precinct), size = 2,
-               color = "white")  +
-  labs(fill = "Black Arrestees") +
-  theme_void()
-
-library(patchwork)
-g1 + g2
+complaints <- read_csv("https://data.cityofnewyork.us/resource/5uac-w243.csv?$limit=133114", na = c("(null)", ""),
+                        col_types = cols(
+    cmplnt_num = col_character()))
 ```
 
 ```{r}
-race_counts <- newer |>
-  group_by(Precinct, perp_race) |>
-  mutate(count = n()) |>
-  ungroup()
+complaints <- complaints |>
+  mutate(complaint_date = as.Date(cmplnt_fr_dt)) |>
+  rename(Precinct = addr_pct_cd) |>
+  filter(complaint_date >= as.Date("2026-01-01"))
 
-prop_data <- race_counts |>
-  group_by(Precinct) |>
-  mutate(prop = count / sum(count))
+complaintsbyprecinct <- complaints |>
+  count(Precinct) |>
+  rename(complaints = n)
 
-ggplot(prop_data) +
-  geom_sf(aes(fill = prop)) +
-  geom_sf_text(aes(label = Precinct), size = 2, color = "white") +
-  facet_wrap(~perp_race) +
-  theme_minimal()
+arrestsbyprecinct <- arrests |>
+  count(Precinct) |>
+  rename(arrests = n)
 
+joint_data <- left_join(complaintsbyprecinct, arrestsbyprecinct, by = "Precinct")
+```
 
-filtered_data <- prop_data |> 
-  filter(perp_race %in% c("WHITE", "BLACK"))
-
-ggplot(filtered_data) +
-  geom_sf(aes(fill = prop)) +
-  geom_sf_text(aes(label = Precinct), size = 2, color = "white") +
-  facet_wrap(~perp_race) +
+```{r}
+ggplot(joint_data, aes(x = complaints, y = arrests)) +
+  geom_point(alpha = 0.6, stroke = 0, size = 2) +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(title = "Complaints vs Arrests by Precinct") +
   theme_minimal()
 ```
+
+There is a strong, positive correlation between NYPD complaints and arrests. After running a linear regression model, I found that complaints were a strong predictor for arrests($\beta = 0.62, p < 0.001$), and that NYPD complaints also explain 91.11% of the variation in arrests ($R^2 = 0.9111$). In other words, there is a strong association between NYPD complaints and arrests.
+
+```{r}
+model <- lm(arrests~complaints, data = joint_data)
+
+summary(model)
+```
+
+
+
+```{r}
+shootings <- read_csv("https://data.cityofnewyork.us/resource/5ucz-vwe8.csv?$limit=25000", na = c("(null)", ""))
+```
+```{r}
+shootings <- shootings |>
+  mutate(boro = recode(boro, `MANHATTAN` = "M", `BRONX` = "B", `BROOKLYN` = "K",
+                           'QUEENS' = "Q", 'STATEN ISLAND' = "S")) |>
+  rename(boro = boro, Precinct = precinct) |>
+  filter(occur_date >= as.Date("2026-01-01"))
+  
+```
+
+```{r}
+arrests_num <- arrests |>
+  count(Precinct) |>
+  rename(arrests = n)
+
+complaints_num <- complaints |>
+  count(Precinct) |>
+  rename(complaints = n) 
+
+shootings_num <- shootings |>
+  count(Precinct) |>
+  rename(shootings = n)
+
+data <- arrests_num |>
+  full_join(complaints_num, by = "Precinct") |>
+  full_join(shootings_num, by = "Precinct")
+
+data$shootings <-  replace_na(data$shootings, 0)
+
+```
+
+
+#### What type of crime indicators are more strongly associated with NYPD arrests across NYC precincts.
+```{r}
+library(GGally)
+ggpairs(data[, c("arrests", "complaints", "shootings")])
+```
+In this graph, each observation represents a NYC precinct. The variables, which are arrests, complaints, and shootings, are summed up counts within each precinct. The pairwise plot shows relationships and their correlation coefficients between each combination of the variables, all of which are positive and statistically significant (indicated by the asterisks). The graph also suggests that precincts with higher levels of NYPD complaints are associated with higher NYPD arrest counts, while shootings have a weaker association with higher arrest accounts in comparison.
+
+### Topic 3: Arrests by Location and Race
+
+#### Does the racial distribution of arrests differ by NYC borough?
+
+```{r}
+ggplot(arrests, aes(x = arrest_boro, fill = perp_race)) +
+  geom_bar(position = "fill") +
+  scale_fill_brewer(palette = "Set1") +
+  labs(y = "proportion")
+```
+
+
+
+
+#### What is the racial distribution of people who are arrested in the precinct with the highest number of arrests?
+```{r}
+data$Precinct[which.max(data$arrests)]
+```
+
+```{r}
+p75 <- arrests |>
+  filter(Precinct == 75)
+
+race_p75 <- p75 |>
+  count(perp_race)
+
+race_p75 <- p75 |>
+  count(perp_race) |>
+  mutate(prop = n / sum(n))
+
+ggplot(race_p75, aes(y = fct_reorder(perp_race, prop), x = prop)) +
+  geom_col(fill = "darkblue") +
+  theme_minimal() +
+  labs(title = "Racial distribution of arrests in Precinct 75 (Brooklyn)")
+
+```
+Out of the 2545 people arrested in Precinct 75, 68% were identified as Black, 18% were identified as White Hispanic, 6% were identified as Black hispanic, 4% were identified as White, 3% were identified as Asian/Pacific Islander, and
+less than 0% were identified as American Indian/Alaskan Native or unknown.
+
+
+#### What is the racial distribution of people who are arrested in the precinct with the lowesr number of arrests?
+```{r}
+data$Precinct[which.min(data$arrests)]
+```
+
+```{r}
+p22 <- arrests |>
+  filter(Precinct == 22)
+
+race_p22 <- p22 |>
+  count(perp_race)
+
+race_p22 <- p22 |>
+  count(perp_race) |>
+  mutate(prop = n / sum(n))
+
+ggplot(race_p22, aes(y = fct_reorder(perp_race, prop), x = prop)) +
+  geom_col(fill = "darkblue") +
+  theme_minimal() +
+  labs(title = "Racial distribution of arrests in Precinct 22 (Manhattan)")
+
+```
+There were a total of 19 arrests in Precinct 22. Out of those arrests, 58%
+were people identified as hispanics, 32% were people identified as black,
+and 11% were people identified as white.
+
+
+
 
 ## Conclusion
