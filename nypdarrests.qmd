@@ -12,13 +12,17 @@ Hi everyone, welcome to my project! This project looks at NYPD Arrest Data (YTD)
 
 The data was collected by the NYPD and published by NYC’s Open Data team. The data was imported, using an csv file from the NYPD Arrest (Year to Date) Data set. The dataframe contains 19 columns and 63.5k rows. The data is updated every year some time during mid to late April. Another dataset that I use in this project is also NYPD Complaint data, using an API. To control for time, both datasets are filtered to only include data from this year (1/1/26 - 3/31/26). Some limitations of this dataset is that there is no data provided that informs us whether or not these arrested people were let go, whether they were scheduled a trial, or whether some of these arrests pertain to the same individual; that some demographic information pertaining to individuals are missing; and that even though these people were arrested, cannot say for certain all actually committed the crime.
 
-Here are the links to the datasets:
+Below are the links to all the datasets used in this project:
 
 [NYPD Arrests](https://data.cityofnewyork.us/Public-Safety/NYPD-Arrest-Data-Year-to-Date-/uip8-fykc/about_data)
 
 [NYPD Complaints](https://data.cityofnewyork.us/Public-Safety/NYPD-Complaint-Data-Current-Year-To-Date-/5uac-w243/about_data)
 
 [NYC Shootings](https://data.cityofnewyork.us/Public-Safety/Shootings-2006-Present-/5ucz-vwe8/about_data)
+
+[NYPP Shape Data (25c)](https://www.nyc.gov/content/planning/pages/resources/datasets/police-precincts)
+
+[NYBB Shape Data (26a)](https://www.nyc.gov/content/planning/pages/resources/datasets/borough-boundaries)
 
 ### Missing Value Analysis
 
@@ -39,7 +43,9 @@ arrests <- arrests |>
          ky_cd = KY_CD, jurisdiction_code = JURISDICTION_CODE, 
          ofns_desc = OFNS_DESC, arrest_boro = ARREST_BORO, 
          Precinct = ARREST_PRECINCT, perp_race = PERP_RACE,
-         pd_cd = PD_CD, longitude = Longitude, latitude = Latitude)
+         pd_cd = PD_CD, longitude = Longitude, latitude = Latitude) |>
+    mutate(arrest_boro = recode(arrest_boro, `M` = "Manhattan", `B` = "Bronx", `K` = "Brooklyn",
+                           'Q' = "Queens", 'S' = "Staten Island"))
 ```
 
 ```{r}
@@ -56,7 +62,7 @@ Most of the rows in the dataset contained no missing values. Above the graph sho
 
 ## Results
 
-### Topic 1: Location of Arrests 
+### Topic 1: Spatial Patterns in  Arrests
 
 #### Where are arrests concentrated?
 
@@ -66,8 +72,8 @@ library(sf)
 nybb <- st_read("nybb_26a/nybb.shp")
 
 nybb <- nybb |>
-  mutate(BoroCode = recode(BoroCode, `1` = "M", `2` = "B", `3` = "K",
-                           '4' = "Q", '5' = "S")) |>
+  mutate(BoroCode = recode(BoroCode, `1` = "Manhattan", `2` = "Bronx", `3` = "Brooklyn",
+                           '4' = "Queens", '5' = "Staten Island")) |>
   rename(arrest_boro = BoroCode)
 ```
 
@@ -79,7 +85,6 @@ graph1 <- ggplot(arrests, aes(x = arrest_boro, fill = arrest_boro)) +
        y = "count", x = "NYC Borough") +
   theme_minimal()
 ```
-
 
 ```{r}
 #| message: false
@@ -99,15 +104,17 @@ graph2 <- ggplot() +
 ```
 
 ##### Concentration by Borough
+
 ```{r}
 #| fig-length: 5
 #| fig-width: 10
 graph2 + graph1
 ```
-The graphs compare arrest patterns across NYC's boroughs, with each borough labeled by its abbreviation/first initial letter (except for Brooklyn, represented by "K"). The left spatial graph shows the spatial distribution of individual arrest locations using their respective x and y coordinates, while the right bar graph shows the total number of arrests in each borough. Side by side, the plots show that Brooklyn (n = 21111) has the highest numbers of arrests compared to the other boroughs, while Staten Island (n = 2551) has the lowest.
 
+The graphs compare arrest patterns across NYC's boroughs. The left spatial graph shows the spatial distribution of individual arrest locations using their respective x and y coordinates, while the right bar graph shows the total number of arrests in each borough. Side by side, the plots show that Brooklyn (n = 21111) has the highest numbers of arrests compared to the other boroughs, while Staten Island (n = 2551) has the lowest.
 
 ##### Concentration by Precinct
+
 ```{r, fig.height= 15}
 
 precincts_counts <- arrests |>
@@ -117,14 +124,13 @@ precincts_counts <- arrests |>
 ggplot(precincts_counts, aes(x = count, y = fct_reorder(as.factor(Precinct), count))) +
   geom_point(size = 4, color = "cornflowerblue") +
   labs(y = "Precinct", title = "Number of Arrests by Precinct", subtitle = "From January 1, 2026 to March 31, 2026") +
-  theme_minimal(18) + 
+  theme_minimal(16) + 
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
 ```
-This Cleveland dot plot displays the distribution of the total amount of arrests from 1/1/26 to 3/31/26 across NYC precincts, with Precinct 75 having the highest number of arrests (n = 2545) and
-Precinct 22 having the lowest amount of arrests (n = 19).
 
+This Cleveland dot plot displays the distribution of the total amount of arrests from 1/1/26 to 3/31/26 across NYC precincts, with Precinct 75 having the highest number of arrests (n = 2545) and Precinct 22 having the lowest amount of arrests (n = 19).
 
-### Topic 2: Arrests and Indicators of Crime Across Precincts
+### Topic 2: Relationship Between Arrests and Indicators of Crime Across Precincts
 
 #### What is the association between the number of crime complaints and arrests across precincts?
 
@@ -169,15 +175,14 @@ model <- lm(arrests~complaints, data = joint_data)
 summary(model)
 ```
 
-
-
 ```{r}
 shootings <- read_csv("https://data.cityofnewyork.us/resource/5ucz-vwe8.csv?$limit=25000", na = c("(null)", ""))
 ```
+
 ```{r}
 shootings <- shootings |>
-  mutate(boro = recode(boro, `MANHATTAN` = "M", `BRONX` = "B", `BROOKLYN` = "K",
-                           'QUEENS' = "Q", 'STATEN ISLAND' = "S")) |>
+  mutate(boro = recode(boro, `MANHATTAN` = "Manhattan", `BRONX` = "Bronx", `BROOKLYN` = "Brooklyn",
+                           'QUEENS' = "Queens", 'STATEN ISLAND' = "Staten Island")) |>
   rename(boro = boro, Precinct = precinct) |>
   filter(occur_date >= as.Date("2026-01-01"))
   
@@ -204,15 +209,16 @@ data$shootings <-  replace_na(data$shootings, 0)
 
 ```
 
-
 #### What type of crime indicators are more strongly associated with NYPD arrests across NYC precincts.
+
 ```{r}
 library(GGally)
 ggpairs(data[, c("arrests", "complaints", "shootings")])
 ```
+
 In this scatterplot matrix, each observation represents a NYC precinct. The variables, which are NYPD arrests, NYPD complaints, and NYC shootings, are summed up counts within each precinct. The pairwise plot shows relationships and their correlation coefficients between each combination of the variables, all of which are positive and statistically significant (indicated by the asterisks). The graph also suggests that precincts with higher levels of NYPD complaints are correlated with higher NYPD arrest counts, while shootings have a weaker correlation with higher arrest accounts in comparison.
 
-### Topic 3: Arrests by Location and Race
+### Topic 3: Racial Composition of People Arrested Across NYC
 
 #### Does the racial distribution of arrests differ by NYC borough?
 
@@ -225,16 +231,11 @@ ggplot(arrests, aes(x = arrest_boro, fill = perp_race)) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
 ```
-The bar graph shows the proportional distribution of arrests by race across
-the five boroughs, with each borough on the x-axis labeled by its
-first letter initial, with "K" representing Brooklyn. Across all boroughs,
-individuals identified as Black make up the largest proportion of arrests compared to other racial groups, while Asians/Pacific Islanders represent the 
-smallest proportion
 
-
-
+The bar graph shows the proportional distribution of arrests by race across the five boroughs, with each borough on the x-axis. Across all boroughs, individuals identified as Black make up the largest proportion of arrests compared to other racial groups, while Asians/Pacific Islanders represent the smallest proportion
 
 #### What is the racial distribution of people who are arrested in the precinct with the highest number of arrests?
+
 ```{r}
 data$Precinct[which.max(data$arrests)]
 ```
@@ -259,11 +260,11 @@ ggplot(race_p75, aes(y = fct_reorder(perp_race, prop), x = prop)) +
         plot.subtitle = element_text(hjust = 0.5))
 
 ```
-As represented in the bar graph, out of the 2545 people arrested in Precinct 75, 68% were identified as Black, 18% were identified as White Hispanic, 6% were identified as Black hispanic, 4% were identified as White, 3% were identified as Asian/Pacific Islander, and
-less than 0% were identified as American Indian/Alaskan Native or unknown.
 
+As represented in the bar graph, out of the 2545 people arrested in Precinct 75, 68% were identified as Black, 18% were identified as White Hispanic, 6% were identified as Black hispanic, 4% were identified as White, 3% were identified as Asian/Pacific Islander, and less than 0% were identified as American Indian/Alaskan Native or unknown.
 
 #### What is the racial distribution of people who are arrested in the precinct with the lowesr number of arrests?
+
 ```{r}
 data$Precinct[which.min(data$arrests)]
 ```
@@ -288,15 +289,15 @@ ggplot(race_p22, aes(y = fct_reorder(perp_race, prop), x = prop)) +
         plot.subtitle = element_text(hjust = 0.5))
 
 ```
-As represented in the bar graph, there were a total of 19 arrests in Precinct 22. Out of those arrests, 58%
-were people identified as hispanics, 32% were people identified as black,
-and 11% were people identified as white.
 
+As represented in the bar graph, there were a total of 19 arrests in Precinct 22. Out of those arrests, 58% were people identified as hispanics, 32% were people identified as black, and 11% were people identified as white.
+
+
+### Short Summary of Findings
+Overall, there are different geographic and demographic variations in NYPD arrest patterns across NYC. Brooklyn had the highest frequency of arrests and also contained the precinct with the highest number of arrests. On the other hand, Staten Island had the lowest total number of arrests, while Manhattan's Precinct 22 recorded the lowest arrest count year to date. When comparing arrests with crime indicators, both shootings and NYPD complaints showed strong, positive correlations with arrest counts across precincts. However, the association between complaints and arrests was noticeably stronger and statistically significant, suggesting a stronger relationship between NYPD complaints and arrest activity at the precinct level. Additionally, individuals identified as Black represented the largest proportion of arrested across all five boroughs, though racial composition varied at the  precinct level.
 
 
 
 ## Conclusion
 
-This project analyzed NYPD arrest data (YTD) to explore relationships between arrests and crime indicators, including shootings and NYPD complaints, as well as spatial patterns and racial composition across NYC. Overall, Brooklyn had the highest frequency of arrests and also contained the precinct with the highest number of arrests. On the other hand, Staten Island had the lowest total number of arrests, while Manhattan's Precinct 22 recorded the lowest arrest count year to date. When comparing arrests with crime indicators, both shootings and NYPD complaints showed strong, positive correlations with arrest counts across precincts. However, the association between complaints and arrests was noticeably stronger and statistically significant, suggesting a stronger relationship between NYPD complaints and arrest activity at the precinct level. With respect to demographic patterns, individuals identified as Black represented the highest proportion of arrested across all five boroughs, although this pattern was not consistent across every individual precinct. These findings highlight variation in arrest composition across both geographic and demographic variables.
-
-My project had several limitations: the observed relationships are correlational and should NOT be interpreted as causal. While strong associations between variables are present, other unobserved variables, such as population size, socioeconomic conditions, policing presence, income distribution, and precinct-level demographic composition could also share a relationship with patterns observed in the NYPD arrest data. One other limitaition was time alignment with respect to the datasets; different dates outside the time covered in this dataset restrained the observations to only this year, restricting the ability to conduct a time series analysis. Future work could consider this analysis by including additional variables or sociopolitical context, particularly in relation to policing policy shifts such as stop-and-frisk. 
+This project analyzed NYPD arrest data (YTD) to explore relationships between arrests and crime indicators as well as spatial patterns and racial composition across NYC. My project also had several limitations, including that the observed relationships are correlational and should NOT be interpreted as causal; potential influence from unobserved variables like population size, socioeconomic conditions, policing presence, income distribution, and precinct-level demographic composition; and time alignment across datasets that limited the analysis to this year and prevented a time series analysis. Future work could consider this analysis by including additional variables or sociopolitical context, particularly in relation to policing policy shifts such as stop-and-frisk. Overall, I feel like I built a lot of skills during this project and learned that even though data may not always be able to answer my questions, available data is a start to get me thinking about possible explanations. 
