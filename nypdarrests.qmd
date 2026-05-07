@@ -54,7 +54,7 @@ Most of the rows in the dataset contained no missing values. Above the graph sho
 
 ## Results
 
-### Location of Arrests 
+### Topic 1: Location of Arrests 
 
 #### Where are arrests concentrated?
 
@@ -132,7 +132,7 @@ male <- ggplot(newdata) +
   theme_void() 
 ```
 
-### Arrests and Indicators of Crime Across Precincts
+### Topic 2: Arrests and Indicators of Crime Across Precincts
 
 #### What is the association between the number of crime complaints and arrests across precincts?
 
@@ -218,7 +218,7 @@ ggpairs(data[, c("arrests", "complaints", "shootings")])
 ```
 In this graph, each observation represents a NYC precinct. The variables, which are arrests, complaints, and shootings, are summed up counts within each precinct. The pairwise plot shows relationships and their correlation coefficients between each combination of the variables, all of which are positive and statistically significant (indicated by the asterisks). The graph also suggests that precincts with higher levels of NYPD complaints are associated with higher NYPD arrest counts, while shootings have a weaker association with higher arrest accounts in comparison.
 
-### Arrests by Location and Race
+### Topic 3: Arrests by Location and Race
 
 #### Does the racial distribution of arrests differ by NYC borough?
 
