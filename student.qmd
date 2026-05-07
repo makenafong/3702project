@@ -226,6 +226,56 @@ Across the nine topics, students rated "Diversity, Equity, & Inclusion (DEI)" mo
 
 Another pattern worth noting is that, for the two lowest topics, the within-topic differences are noticeable, ranging from negative percentages of agreeableness to nearly 80-90%, suggesting that students had substantially different understandings across the questions designed to measure "Academic Press" and "Emotional Well-Being". Therefore, let's create two bar charts for these topics to closely examine which questions were the most concerning to NYC students.
 
+```{r}
+# Create the question text
+q_text <- tribble(
+  ~question_int, ~question_text,
+  # Academic Press
+  28, "Leaning a lot to prepare for next grade",
+  39, "Prompting me to think critically",
+  41, "Feeling challenged in class",
+  42, "Receiving difficult questions on tests",
+  43, "Receiving difficult questions in class",
+  44, "Working in small groups",
+  45, "Feeling encouraged to become a better thinker",
+  # Emotional Well-Being
+  11, "Feeling happy when learning",
+  12, "Feeling safe when learning",
+  13, "Feeling optimistic when learning",
+  14, "Feeling bored when learning (reverse-coded)",
+  15, "Feeling stressed when learning (reverse-coded)",
+  16, "Feeling worried when learning (reverse-coded)"
+)
+
+focus_questions <- questions |>
+  filter(topic %in% c("Academic Press", "Emotional Well-Being")) |>
+  left_join(q_text, by = "question_int")
+
+#install.packages("tidytext")
+library(tidytext)
+
+ggplot(focus_questions, aes(x = questions_median, 
+                            y = reorder_within(question_text, questions_median, topic), 
+                            fill = topic)) +
+  geom_col() +
+  facet_wrap(~ topic, ncol = 1, scales = "free_y") +
+  scale_y_reordered() +
+  labs(
+    title = "Question-Level Breakdown of Two Lowest Rated Topics",
+    subtitle = "from NYC Student Reflection on School Climate",
+    x = "% of agreeableness",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none")
+```
+
+The bar chart reveals that the low ratings on "Academic Press" and "Emotional Well-Being" have significant in-group differences. 
+
+For "Academic Press", students felt positive about being prepared and encouraged to think, but they also reflected that they were not challenged enough in class or on tests. Therefore, the interpretation is that, instead of feeling disappointed about their education, students felt that they were learning but not getting challenged to reflect on their learning outcomes.
+
+For "Emotional Well-Being", students reported feeling safe, happy, and optimistic, but also stressed and bored. The assumption is that such complicated emotions were aligned with the remote and hybrid learning conditions of 2021 (rather than solely reflecting the educational climate), when students had greater flexibility to stay at home, which led to more intense emotions.
+
 
 ### Question 2: do the five boroughs differ in students' perceptions of climate, and if so, on which dimensions?
 
@@ -279,6 +329,10 @@ ggplot(borough_topic,
   )
 ```
 
+The heatmap shows that the topic-level ranking is generally identical across all five boroughs: every borough rates "Diversity, Equity, & Inclusion (DEI)" most positively (shown as the deep green at the top), and "Academic Press" and "Emotional Well-Being" most negatively (shown as the pink at the bottom). The results indicate that the patterns from Question #1 are not driven by any specific borough and instead reflect a citywide pattern.
+
+There are two notable findings. First, Manhattan stands out as the most positive borough across nearly every topic, with the deepest green at the top and the lightest pink at the bottom. Second, while all four other boroughs share a gray-green on the topic "Preventing Bullying," Manhattan presents a noticeable green, indicating that students from Manhattan public schools report a substantially higher rate on "Preventing Bullying" than students from other boroughs. One potential explanation for both observations is that Manhattan might receive the most funding, resulting in better educational resources.
+
 
 ### Question 3: do the survey response rates correlate with how positively students rate their schools?
 
@@ -299,9 +353,8 @@ corr <- cor(school_avg$response_rate, school_avg$pos_avg)
 # Plot the correlation graph
 ggplot(school_avg, aes(x = response_rate, y = pos_avg)) +
   geom_point(aes(color = borough), alpha = 0.5, size = 1.5) +
-  geom_smooth(method = "lm", color = "black", linewidth = 0.8) +
   labs(
-    title = sprintf("Survery Response Rate vs Average School Climate Rating in NYC (r = %.2f)", corr),
+    title = "Survery Response Rate vs Average School Climate Rating in NYC",
     x = "Survey Response Rate (in %)",
     y = "Average Climate Rating (in %)",
     color = "Borough"
@@ -309,5 +362,6 @@ ggplot(school_avg, aes(x = response_rate, y = pos_avg)) +
   theme_minimal(base_size = 11)
 ```
 
+The scatterplot shows essentially no relationship between a school's survey response rate and its overall climate rating. Despite the survey response rates, the corresponding average ratings are widely spread along the y-axis. In addition, borough colors are intermixed throughout the scatter cloud rather than clustering in specific regions, indicating no geographic differences between the two ratings.
 
 ## Conclusion
