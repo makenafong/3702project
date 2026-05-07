@@ -4,6 +4,7 @@ Title: Does not matter
 Version: 0.0.0.9000
 Imports: 
     arrow,
+    GGally,
     ggridges,
     knitr,
     naniar,
@@ -12,6 +13,7 @@ Imports:
     redav,
     rmarkdown,
     sf,
-    tidyverse
+    tidyverse,
+    tigris
 Remotes: 
     jtr13/redav
