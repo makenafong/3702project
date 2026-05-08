@@ -4,11 +4,12 @@ Charlene Shen
 
 ## Introduction
 
+This project explores NYC restaurant inspection data to understand patterns in inspection outcomes. I mainly focus on inspection scores, grades, cuisine types, inspection types, and location. Since restaurant inspections are related to public health and food safety, this dataset is useful for seeing whether worse inspection outcomes are connected to restaurant characteristics or geography.
 
 ## Data
 ### Description
 
-
+The dataset comes from NYC restaurant inspection records. Each row represents an inspection record for a restaurant and includes information such as restaurant name, borough, cuisine type, inspection type, inspection score, grade, and location coordinates. The main variables used in this analysis are SCORE, GRADE, INSPECTION TYPE, CUISINE DESCRIPTION, BORO, Longitude, and Latitude.
 
 ```{r}
 
@@ -28,7 +29,7 @@ head(df)
 
 #### Missing Values by Variable
 
-* Analyses involving grades or scores should be interpreted with caution, as missing data may introduce bias into the results.
+This graph shows that missingness is not evenly distributed across variables. Grade-related fields such as GRADE and GRADE DATE have many missing values, while key identifiers like CAMIS and BORO are mostly complete.
 
 ```{r}
 
@@ -44,7 +45,7 @@ ggplot(missing_count, aes(x = reorder(variable, missing), y = missing)) +
 
 #### Missing Grade by Inspection Type
 
-* It seems that missing values in the GRADE variable are not random. Instead, they depend on the type of inspection. For example, categories like administrative or compliance inspections almost always have missing grades, which likely means that a grade is not assigned in those cases. On the other hand, initial and cycle inspections are more likely to have a recorded grade. This suggests that whether a grade appears in the data depends more on the inspection process itself rather than just data quality issues.
+The missing values in GRADE do not appear to be random. Some inspection types have much higher proportions of missing grades which suggests that grades may not be assigned for certain inspection processes. This is important because later analyses using GRADE should be interpreted carefully.
 
 ```{r}
 
@@ -54,13 +55,41 @@ df %>%
   ggplot(aes(x = `INSPECTION TYPE`, y = n, fill = grade_missing)) +
   geom_col(position = "fill") +
   coord_flip() +
+  labs(
+    title = "Missing Grade by Inspection Type",
+    x = "Inspection Type",
+    y = "Proportion",
+    fill = "Grade Missing"
+  ) +
+  theme_minimal()
+
+```
+#### Missing Coordinates by Borough
+
+Location coordinates are mostly complete across boroughs, so later geographic analysis is unlikely to be heavily biased by missing latitude or longitude values.
+
+```{r}
+
+coord_missing_boro <- df |>
+  filter(!is.na(BORO), BORO != "0") |>
+  mutate(coord_missing = is.na(Longitude) | is.na(Latitude)) |>
+  count(BORO, coord_missing)
+
+ggplot(coord_missing_boro, aes(x = BORO, y = n, fill = coord_missing)) +
+  geom_col(position = "fill") +
+  labs(
+    title = "Missing Location Coordinates by Borough",
+    x = "Borough",
+    y = "Proportion",
+    fill = "Coordinates Missing"
+  ) +
   theme_minimal()
 
 ```
 
 ## Results
 
-### Question 1: Are re-inspections associated with worse scores?
+### Question 1: Are re-inspections associated with different inspection scores?
 
 ```{r}
 
@@ -70,18 +99,44 @@ df |>
     "Pre-permit (Operational) / Re-inspection",
     "Pre-permit (Non-operational) / Re-inspection"
   )) |>
+  filter(!is.na(SCORE)) |>
   ggplot(aes(x = reinspect, y = SCORE)) +
   geom_boxplot() +
   labs(
-    title = "Scores by Inspection Type",
+    title = "Inspection Scores by Re-inspection Status",
     x = "Re-inspection",
-    y = "Score"
+    y = "Inspection Score"
   ) +
   theme_minimal()
 
 ```
+This boxplot above shows that the score distributions for re-inspections and non re-inspections are pretty similar, but re-inspections seem to have a slightly lower median score. The non re-inspection group also has more extreme high-score outliers. This was a little unexpected, since I originally thought re-inspections might be linked to worse scores.
 
-### Question 2: Which cuisine types have the worst inspection scores?
+```{r}
+
+df |>
+  mutate(reinspect = `INSPECTION TYPE` %in% c(
+    "Cycle / Re-inspection",
+    "Pre-permit (Operational) / Re-inspection",
+    "Pre-permit (Non-operational) / Re-inspection"
+  )) |>
+  filter(!is.na(SCORE)) |>
+  group_by(reinspect) |>
+  summarise(
+    count = n(),
+    mean_score = mean(SCORE),
+    median_score = median(SCORE),
+    min_score = min(SCORE),
+    max_score = max(SCORE)
+  )
+
+```
+
+The summary table gives the same impression. The median score for re-inspections is 18, while the median for non re-inspections is 21. The mean score is also slightly lower for re-inspections. However, there are far fewer re-inspections in the data, so I would be careful about making a strong conclusion from this comparison alone.
+
+Based on these two outputs, re-inspections do not seem to have worse outcomes. They may even have slightly better scores, possibly because restaurants fix some problems before being inspected again. Still, this should be treated as an association rather than proof that re-inspections directly improve scores.
+
+### Question 2: Do some cuisine types tend to have worse inspection outcomes?
 
 ```{r}
 
@@ -94,12 +149,12 @@ cuisine_score <- df |>
   ) |>
   filter(count >= 20) |>
   arrange(desc(avg_score)) |>
-  slice(1:50)
+  slice(1:15)
 
 ggplot(cuisine_score, aes(x = avg_score, y = reorder(`CUISINE DESCRIPTION`, avg_score))) +
   geom_col(fill = "pink") +
   labs(
-    title = "Cuisine Types with Worst Inspection Scores",
+    title = "Cuisine Types with Highest Average Inspection Scores",
     x = "Average Inspection Score",
     y = "Cuisine Type"
   ) +
@@ -107,57 +162,119 @@ ggplot(cuisine_score, aes(x = avg_score, y = reorder(`CUISINE DESCRIPTION`, avg_
 
 ```
 
+The bar chart above suggests that some cuisine types have higher average inspection scores than others. Korean, Latin American, Asian/Asian Fusion, Caribbean, and Chinese restaurants show some of the highest average scores in this sample. Since higher inspection scores usually indicate more violations, these cuisine types appear to have worse inspection outcomes at first glance.
+
 ```{r}
 
-cuisine_score_box <- df |>
-  filter(!is.na(SCORE), !is.na(`CUISINE DESCRIPTION`)) |>
-  group_by(`CUISINE DESCRIPTION`) |>
-  filter(n() >= 20) |>
-  ungroup()
+top_cuisines <- cuisine_score$`CUISINE DESCRIPTION`
 
-top_cuisine <- cuisine_score_box |>
-  count(`CUISINE DESCRIPTION`, sort = TRUE) |>
-  slice(1:12)
-
-cuisine_score_box <- cuisine_score_box |>
-  filter(`CUISINE DESCRIPTION` %in% top_cuisine$`CUISINE DESCRIPTION`)
-
-ggplot(cuisine_score_box, aes(x = SCORE, y = reorder(`CUISINE DESCRIPTION`, SCORE))) +
-  geom_boxplot(outlier.shape = NA) +
-  coord_cartesian(xlim = c(0, 80)) +
+df |>
+  filter(
+    !is.na(SCORE),
+    `CUISINE DESCRIPTION` %in% top_cuisines
+  ) |>
+  ggplot(aes(x = SCORE, y = reorder(`CUISINE DESCRIPTION`, SCORE))) +
+  geom_boxplot() +
+  coord_cartesian(xlim = c(0, 100)) +
   labs(
-    title = "Inspection Score Distribution by Cuisine Type", 
-    x = "Inspection Score", 
+    title = "Score Distribution Among High-Score Cuisine Types",
+    x = "Inspection Score",
     y = "Cuisine Type"
   ) +
   theme_minimal()
 
 ```
+However, the boxplot shows that this pattern should be interpreted carefully. Some of the higher averages seem to be influenced by extreme scores, rather than all restaurants in that cuisine group performing poorly. For example, Chinese, Spanish, and Caribbean restaurants have several high-score outliers. Because of this, it is more accurate to say that these cuisine types may show higher risk or greater variability in inspection outcomes, rather than simply concluding that they are worse overall.
 
-### Question 3: Are restaurant inspection grades geographically clustered?
+### Question 3: Are high-score restaurants clustered differently from all inspected restaurants?
 
 ```{r}
 
-location_grade <- df |>
+location_all <- df |>
   filter(
     !is.na(Longitude),
     !is.na(Latitude),
     Longitude != 0,
     Latitude != 0,
-    GRADE %in% c("A", "B", "C")
+    Longitude > -75,
+    Longitude < -73,
+    Latitude > 40,
+    Latitude < 41
   )
 
-ggplot(location_grade, aes(x = Longitude, y = Latitude, color = GRADE)) +
-  geom_point(alpha = 0.5, size = 1) +
+high_score_cutoff <- quantile(df$SCORE, 0.75, na.rm = TRUE)
+
+location_high <- location_all |>
+  filter(
+    !is.na(SCORE),
+    SCORE >= high_score_cutoff
+  )
+
+pic_all <- ggplot(location_all, aes(x = Longitude, y = Latitude)) +
+  stat_density_2d(
+    aes(fill = after_stat(level)),
+    geom = "polygon",
+    alpha = 0.6
+  ) +
+  geom_point(alpha = 0.15, size = 0.4, color = "black") +
   labs(
-    title = "Restaurant Locations by Inspection Grade",
+    title = "All Inspected Restaurants",
     x = "Longitude",
     y = "Latitude",
-    color = "Grade"
+    fill = "Density"
   ) +
   theme_minimal()
 
+pic_high <- ggplot(location_high, aes(x = Longitude, y = Latitude)) +
+  stat_density_2d(
+    aes(fill = after_stat(level)),
+    geom = "polygon",
+    alpha = 0.6
+  ) +
+  geom_point(alpha = 0.25, size = 0.6, color = "black") +
+  labs(
+    title = "High-Score Restaurants",
+    subtitle = "Top 25% of inspection scores",
+    x = "Longitude",
+    y = "Latitude",
+    fill = "Density"
+  ) +
+  theme_minimal()
+
+pic_all + pic_high
+
+```
+These two maps compare the location pattern of all inspected restaurants with the location pattern of restaurants that have high inspection scores. The two maps look pretty similar in some areas, especially around Manhattan and Brooklyn, which makes sense because those areas have a lot of restaurants overall.
+
+At the same time, the high-score restaurant map looks a little more concentrated. The main hotspot seems to be around the central Manhattan/Brooklyn area, with some spread toward Queens. This suggests that high-score restaurants may be somewhat geographically clustered. However, I would be careful with this interpretation because the map may also be showing where restaurant density is already high. Also, since the two panels use different density scales, I am mainly using them to compare the general spatial pattern, not the exact density values.
+
+```{r}
+
+high_score_cutoff <- quantile(df$SCORE, 0.75, na.rm = TRUE)
+
+df |>
+  filter(
+    !is.na(SCORE),
+    !is.na(BORO),
+    BORO != "0"
+  ) |>
+  mutate(high_score = SCORE >= high_score_cutoff) |>
+  group_by(BORO) |>
+  summarise(
+    total = n(),
+    high_score_count = sum(high_score),
+    high_score_share = mean(high_score)
+  ) |>
+  arrange(desc(high_score_share))
+
 ```
 
+The borough summary table helps check whether the map is just reflecting where there are more restaurants. Brooklyn and Queens have the highest shares of high-score inspections, both around 28.8%. Manhattan has the largest number of inspections overall, but its high-score share is lower, around 23.4%. Staten Island has the lowest share, at about 13.9%. 
+
+This makes the map more useful because the table compares proportions instead of only showing dense restaurant areas. Based on this sample, Brooklyn and Queens seem to have a slightly higher proportion of worse inspection outcomes. Still, I would not say that borough location directly causes higher scores. I see this more as an exploratory pattern that could be studied more carefully later.
 
 ## Conclusion
+
+Overall, the analysis suggests that restaurant inspection outcomes vary by inspection process, cuisine type, and geography. Re-inspections do not appear to have worse scores; in fact, they have slightly lower median scores in this sample. Some cuisine types have higher average scores, but the boxplots show that outliers play an important role. The geographic analysis also suggests that high-score restaurants are somewhat clustered, although this pattern partly overlaps with areas where restaurants are generally concentrated. Because this is an exploratory analysis, these results should be interpreted as associations rather than causal relationships.
+
+
