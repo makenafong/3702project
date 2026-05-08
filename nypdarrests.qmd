@@ -21,7 +21,7 @@ My project is divided into the following three topics, each addressing separate 
 
 The arrest data was collected by the NYPD, reviewed and extracted by the Office of Management and Planning, then published by NYC’s Open Data team. It was imported, using a csv file, as a dataframe containing 19 columns and 69.3k rows. The data columns spanned information ranging from information about the crime and location to demographics of the person arrested. The data is updated quarterly throughout the year, and most recently during late April. Other datasets that I use in this project are NYPD Complaint data and NYC Shootings, both of which are collected by the NYPD, updated quarterly, and were called into this project using an API. To control for time and location, datasets were filtered to include only  observations from 1/1/26 to 3/31/26 and were grouped and merged by precinct. Some limitations of the dataset are that is does not indicate whether arrested individuals were released, formally charged and indicted, or scheduled for a trial, nor does it clarify whether observations identified repeated offenders. Moreover, some demographic variables contain missing values, and an arrest record by itself does not confirm that an individual committed the alleged offense.
 
-Below are the links to all the datasets used in this project:
+Below are the links to all the datasets and tools used in this project:
 
 [NYPD Arrests](https://data.cityofnewyork.us/Public-Safety/NYPD-Arrest-Data-Year-to-Date-/uip8-fykc/about_data)
 
@@ -32,6 +32,10 @@ Below are the links to all the datasets used in this project:
 [NYPP Shape Data (25c)](https://www.nyc.gov/content/planning/pages/resources/datasets/police-precincts)
 
 [NYBB Shape Data (26a)](https://www.nyc.gov/content/planning/pages/resources/datasets/borough-boundaries)
+
+[Color Pallettes Used (Not Populated by R)](https://clrs.cc/)
+
+[The Codebook Bible](https://ap4347.github.io/2102/index.html)
 
 ### Missing Value Analysis
 
@@ -96,7 +100,6 @@ graph1 <- ggplot(arrests, aes(x = arrest_boro, fill = arrest_boro)) +
 ```
 
 ```{r}
-#| message: false
 points_sf <- arrests |> 
  select(longitude, latitude, arrest_boro) |> 
   na.omit() |> 
@@ -119,25 +122,56 @@ graph2 <- ggplot() +
 #| fig-width: 10
 graph2 + graph1
 ```
-
 The graphs compare arrest patterns across NYC's boroughs. The left spatial graph shows the spatial distribution of individual arrest locations using their respective x and y coordinates, while the right bar graph shows the total number of arrests in each borough. Side by side, the plots show that Brooklyn (n = 21111) has the highest numbers of arrests compared to the other boroughs, while Staten Island (n = 2551) has the lowest.
 
 ##### Concentration by Precinct
 
-```{r, fig.height= 15}
+```{r}
+#|fig-width: 12
 
-precincts_counts <- arrests |>
-  count(Precinct) |>
-  rename(count = n)
+top_precincts_counts <- arrests |>
+  count(Precinct, arrest_boro) |>
+  rename(count = n) |>
+  arrange(desc(count)) |>
+  slice_head(n = 10)
 
-ggplot(precincts_counts, aes(x = count, y = fct_reorder(as.factor(Precinct), count))) +
-  geom_point(size = 4, color = "cornflowerblue") +
-  labs(y = "Precinct", title = "Number of Arrests by Precinct", subtitle = "From January 1, 2026 to March 31, 2026") +
-  theme_minimal(16) + 
-  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+ggplot(top_precincts_counts, aes(x = count, y = fct_reorder(as.factor(Precinct), count)
+                                 , color = arrest_boro)) +
+  geom_point(size = 2.5) +
+  scale_color_manual(values = c("Bronx" = "#0074D9", "Brooklyn" = "#2ECC40", 
+       "Manhattan" = "#85144b", "Queens" = "#FF4136", "Staten Island" = "#FF851B")) +
+  geom_text(aes(label = count), color = "black", hjust = -0.3, size = 2.5) +
+  labs(y = "Precinct", x = "Number of Arrests", title = "Top 10 Precincts With Highest Number of Arrests",
+  subtitle = "Total Number of Arrests from January 1, 2026 to March 31, 2026", color = "Borough") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5, size = 9))
 ```
+The Cleveland dot plot shows the 10 precincts with the highest numbers of arrests between January 1, 2026 to March 31, 2026. The colors of each dot represent the borough to which the precinct belongs. While Brooklyn takes the lead for having the highest amount of arrests, the Bronx accounts for five precincts among the 10. Meanwhile, no precinct from Staten Island placed among the top 10.
 
-This Cleveland dot plot displays the distribution of the total amount of arrests from 1/1/26 to 3/31/26 across NYC precincts, with Precinct 75 having the highest number of arrests (n = 2545) and Precinct 22 having the lowest amount of arrests (n = 19).
+```{r}
+bottom_precincts_counts <- arrests |>
+  count(Precinct) |>
+  rename(count = n) |>
+  arrange(count) |>
+  slice_head(n = 10)
+
+bottom_precincts_counts <- bottom_precincts_counts |>
+  left_join(arrests |>
+   group_by(Precinct) |>
+     summarize(arrest_boro = first(arrest_boro)), by = "Precinct")
+
+ggplot(bottom_precincts_counts, aes(x = count, y = fct_reorder(as.factor(Precinct), count),
+                                    color = arrest_boro)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c("Bronx" = "#0074D9", "Brooklyn" = "#2ECC40", 
+        "Manhattan" = "#85144b", "Queens" = "#FF4136", "Staten Island" = "#FF851B")) +
+  geom_text(aes(label = count), color = "black", hjust = 2, size = 2.5) +
+  labs(y = "Precinct", x = "Number of Arrests", title = "Bottom 10 Precincts With Lowest Number of Arrests",
+  subtitle = "Total number of arrests from January 1, 2026 to March 31, 2026", color = "Borough") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5, size = 9))
+```
+This Cleveland dot plot shows the 10 precincts with the lowest numbers of arrests between January 1, 2026 to March 31, 2026. The color of each point represent the borough to which the precinct belongs. Manhattan contains the precinct with the lowest number of arrests and accounts for four of the ten precincts with the lowest arrest counts. No precinct in the Bronx placed among the bottom 10.
 
 ### Topic 2: Relationship Between Arrests and Indicators of Crime Across Precincts
 
@@ -169,7 +203,7 @@ joint_data <- left_join(complaintsbyprecinct, arrestsbyprecinct, by = "Precinct"
 ```{r}
 ggplot(joint_data, aes(x = complaints, y = arrests)) +
   geom_point(alpha = 0.6, stroke = 0, size = 2) +
-  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  geom_smooth(method = "lm", color = "#FF4136", se = FALSE) +
   labs(title = "NYPD Arrests vs. NYPD Complaints by Precinct", 
        subtitle = "From January 1, 2026 to March 31, 2026") +
   theme_minimal() +
@@ -224,7 +258,6 @@ data$shootings <-  replace_na(data$shootings, 0)
 library(GGally)
 ggpairs(data[, c("arrests", "complaints", "shootings")])
 ```
-
 In this scatterplot matrix, each observation represents a NYC precinct. The variables, which are NYPD arrests, NYPD complaints, and NYC shootings, are summed up counts within each precinct. The pairwise plot shows relationships and their correlation coefficients between each combination of the variables, all of which are positive and statistically significant (indicated by the asterisks). The graph also suggests that precincts with higher levels of NYPD complaints are correlated with higher NYPD arrest counts, while shootings have a weaker correlation with higher arrest accounts in comparison.
 
 ### Topic 3: Racial Composition of People Arrested Across NYC
@@ -238,11 +271,10 @@ ggplot(arrests, aes(x = arrest_boro, fill = perp_race)) +
   labs(y = "proportion", title = "Proportional Distribution of Arrests by Race and NYC Borough",
        fill = "Race", x = "Borough", subtitle = "From January 1, 2026 to March 31, 2026") +
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.2), plot.subtitle = element_text(hjust = 0.5))
 ```
 
 The bar graph shows the proportional distribution of arrests by race across the five boroughs, with each borough on the x-axis. Across all boroughs, individuals identified as Black make up the largest proportion of arrests compared to other racial groups, while Asians/Pacific Islanders represent the smallest proportion
-
 
 
 #### What is the racial distribution of people who are arrested in the precinct with the highest number of arrests?
@@ -263,7 +295,7 @@ race_p75 <- p75 |>
   mutate(prop = n / sum(n))
 
 ggplot(race_p75, aes(y = fct_reorder(perp_race, prop), x = prop)) +
-  geom_col(fill = "darkblue") +
+  geom_col(fill = "#3D9970") +
   theme_minimal() +
   labs(title = "Racial distribution of arrests in Precinct 75 (Brooklyn)",
        x = "Proportion", y = "Race", subtitle = "From January 1, 2026 to March 31, 2026") +
@@ -292,7 +324,7 @@ race_p22 <- p22 |>
   mutate(prop = n / sum(n))
 
 ggplot(race_p22, aes(y = fct_reorder(perp_race, prop), x = prop)) +
-  geom_col(fill = "darkblue") +
+  geom_col(fill = "#3D9970") +
   theme_minimal() +
   labs(title = "Racial distribution of arrests in Precinct 22 (Manhattan)", 
        x = "Proportion", y = "Race", subtitle = "From January 1, 2026 to March 31, 2026") +
