@@ -27,6 +27,12 @@ CSV/API source:
 <a href="https://data.cityofnewyork.us/resource/rixx-fc37.csv?$limit=50000" target="_blank" rel="noopener noreferrer">
 Download the Historical Voter Turnout CSV dataset
 </a>
+```{r}
+library(quarto)
+
+quarto_render("NYC_voting_data.qmd")
+```
+
 
 ```{r}
 options(tigris_progress = FALSE)
@@ -575,7 +581,7 @@ library(scales)
 library(knitr)
 library(kableExtra)
 
-nassembly_turnout <- data |>
+assembly_turnout <- data |>
   filter(
     geo_level == "Assembly District",
     year == 2024,
