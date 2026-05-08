@@ -11,7 +11,7 @@ As a Political Science-Statistics student with an interest in local government, 
  
 2) How does voter turnout differ between levels of election? (State, Local, and Presidential Elections across the city)? Beyond this, how might Party Affiliation impact voting patterns?
 
-3) How does voter turnout in the Assembly district around Columbia University's Morningside campus compare to turnout in areas surrouding other NYC college campuses, and what does this suggest about the interaction between civic participation and school demographic makeup?
+3) How does voter turnout in the Assembly District surrounding Columbia University’s Morningside campus compare to turnout in districts surrounding other NYC college campuses, and what might these patterns suggest about the relationship between civic participation, higher educational institutions, and the demographic composition of neighborhoods surrounding certain schools?
 
 ## Data
 ### Description
@@ -50,6 +50,8 @@ Color palettes:
 ColorBrewer Sequential Palettes
 </a>
 
+Demographic data: <a href="https://censusreporter.org/" target="_blank" rel="noopener noreferrer">Census Reporter
+</a>
 
 ```{r}
 library(readr)
@@ -97,7 +99,7 @@ Figure 1 displays the missingness structure for the primary turnout-related vari
 Because the figure focuses only on variables with meaningful patterns of missingness, variables with no missing values were excluded from the visualization. The following analysis, therefore, focuses on how turnout estimates vary across different missing-data thresholds.
 
 #### Geographical Missingness
-```{r, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 library(tidyverse)
 library(sf)
 library(tigris)
@@ -153,6 +155,10 @@ assembly_nyc_compare <- st_intersection(assembly_map_compare, boroughs) |>
     )
   )
 
+
+```
+
+```{r}
 ggplot(assembly_nyc_compare) +
   geom_sf(aes(fill = turnout_group),
           color = "white",
@@ -186,6 +192,7 @@ ggplot(assembly_nyc_compare) +
     )
   )
 ```
+
 As shown in Figure 2, patterns of missing turnout data can be analyzed across New York City Assembly Districts under two missing-data thresholds: districts with turnout related data missing for at least two elections and those with at least three. Such districts are recoded as unavailable (NA) and displayed in grey, demonstrating how stricter missingness thresholds affect the spatial coverage of turnout estimates between 2017 and 2024. Under the “2+ missing values” threshold, several districts in Upper Manhattan, Staten Island, and portions of outer-borough NYC are excluded from the analysis, while the “3+ missing values” threshold restores broader geographic coverage across the city.Staten Island and portions of outer-borough NYC may exhibit greater missingness because these areas contain fewer Assembly Districts and appear to have more uneven election reporting across certain election types and years. As a result, even a small number of incomplete turnout records can remove entire districts from the analysis and alter the spatial appearance of turnout patterns across New York City.
 
 
@@ -199,6 +206,63 @@ Which Assembly-Districts have the highest voter turnout? Beyond this, which NYC 
 #### Voter turnouts differences across Assembly-District levels
 
 ```{r fig.width=12, fig.height=10}
+library(tidyverse)
+library(scales)
+
+turnout_compare <- data |>
+  filter(
+    geo_level == "Assembly District",
+    !is.na(turnout)
+  ) |>
+  mutate(
+    election_type = case_when(
+      str_detect(election, "Presidential") ~ "Presidential",
+      str_detect(election, "Federal") ~ "Federal",
+      str_detect(election, "State") ~ "State",
+      str_detect(election, "City") ~ "Local",
+      str_detect(election, "Off-Year Primary") ~ "Off-Year Primary",
+      str_detect(election, "General") ~ "General",
+      TRUE ~ NA_character_
+    )
+  ) |>
+  filter(!is.na(election_type)) |>
+  group_by(geo_unit, election_type) |>
+  summarise(
+    avg_turnout = mean(turnout, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+district_order <- turnout_compare |>
+  group_by(geo_unit) |>
+  summarise(
+    overall_turnout = mean(avg_turnout),
+    .groups = "drop"
+  ) |>
+  arrange(overall_turnout)
+
+turnout_compare <- turnout_compare |>
+  mutate(
+    geo_unit = factor(
+      geo_unit,
+      levels = district_order$geo_unit
+    ),
+    panel = if_else(
+      as.numeric(geo_unit) <= length(levels(geo_unit)) / 2,
+      "Lower-turnout District",
+      "Higher-turnout District"
+    ),
+    election_type = factor(
+      election_type,
+      levels = c(
+        "Off-Year Primary",
+        "Local",
+        "State",
+        "Federal",
+        "General",
+        "Presidential"
+      )
+    )
+  )
 ggplot(
   turnout_compare,
   aes(x = avg_turnout, y = geo_unit, color = election_type)
@@ -292,7 +356,7 @@ borough_analysis |>
     align = "lccc"
   )
 ```
-Figure 4 compares borough population
+Figure 4 compares 
 <a href="https://www.citypopulation.de/en/usa/newyorkcity/" target="_blank" rel="noopener noreferrer">
 NYC Borough Population Data
 </a>, voter eligibility, and average turnout rates across New York City in 2024. The scope was restricted to 2024 to compare a concrete population number with the voting data. Brooklyn and Queens are the most populous boroughs and have the highest average numbers of residents ineligible to vote. The Bronx has the lowest turnout level in the dataset (22.4%). However, Staten Island retains both the smallest population and the fewest ineligible residents, while also exhibiting the highest turnout rate at 35.6%. The table suggests that larger boroughs do not necessarily produce higher voter participation. Manhattan demonstrates a relatively strong turnout at 30.3%, although it has a smaller population than Brooklyn and Queens. while the Bronx records the lowest turnout rate alongside a comparatively large ineligible population. These patterns cannot speak to causal relationships, but they indicate that differences in voter eligibility, demographic composition, and broader socioeconomic conditions may have a greater impact on political participation than population alone
@@ -473,6 +537,14 @@ library(tidyverse)
 library(scales)
 library(patchwork)
 
+party_table <- tibble(
+  Borough = c("Bronx", "Brooklyn", "Manhattan", "Queens", "Staten Island"),
+  Democrat = c(78.12, 71.66, 69.59, 65.61, 44.17),
+  Republican = c(5.83, 8.82, 9.36, 11.31, 30.39),
+  Independent = c(1.87, 2.00, 2.68, 2.37, 3.33),
+  Unaffiliated = c(13.25, 16.61, 17.76, 19.76, 20.03)
+)
+
 borough_turnout <- data |>
   filter(geo_level == "Borough", year == 2024, !is.na(turnout)) |>
   group_by(geo_unit) |>
@@ -494,10 +566,7 @@ party_heatmap <- party_table |>
   geom_tile(color = "white") +
   geom_text(aes(label = paste0(round(`Registration Share`, 1), "%")),
             fontface = "bold") +
-  scale_fill_gradient(
-    low = "white",
-    high = "purple"
-  ) +
+  scale_fill_gradient(low = "white", high = "purple") +
   labs(
     title = "Party Registration",
     x = NULL,
@@ -534,19 +603,82 @@ turnout_heatmap <- borough_turnout |>
 party_heatmap + turnout_heatmap +
   plot_layout(widths = c(4, 1))
 ```
-Figure 7’s comparison of 2024
+Figure 7’s comparison of 
 <a href="https://citylimits.org/data-drop-which-is-the-bluest-borough/" target="_blank" rel="noopener noreferrer">
-City Limits – Which Is the Bluest Borough?
-</a> party registration composition with average voter turnout across New York City shows that Democratic registration in dominant across every borough. 2024 is used for the sake of intuitiveness, and a lack of demographic information in the “Historical Voter Turnout” dataset. The Bronx is highly Democratic (78.1%), with Brooklyn falling close behind(71.7%), and Manhattan having 69.6% of its population being registered Democrats. Queens and Staten Island remains the least Democratic boroughs, with Staten Island Republicans comprising roughly 30.4% of registered voters.
-The turnout heatmap shows that Staten Island also records the highest 2024 turnout rate at 35.6%, while the Bronx exhibits the lowest turnout at 22.4%. These patterns indicate that boroughs with overwhelming Democratic registration may not necessarily produce the highest voter participation rates. Beyond, this, the Bronx voter distributions are more politically spread than any other borough. Turnout may reflect broader factors such as electoral competitiveness, and socioeconomic conditions, rather than party affiliation. It remains hard to claim for sure with only five boroughs in the sample.
+2024 party registration composition
+</a>
+with average voter turnout across New York City shows that Democratic registration in dominant across every borough. 2024 is used for the sake of intuitiveness, and a lack of demographic information in the “Historical Voter Turnout” dataset. The Bronx is highly Democratic (78.1%), with Brooklyn falling close behind(71.7%), and Manhattan having 69.6% of its population being registered Democrats. Queens and Staten Island remains the least Democratic boroughs, with Staten Island Republicans comprising roughly 30.4% of registered voters.The turnout heatmap shows that Staten Island also records the highest 2024 turnout rate at 35.6%, while the Bronx exhibits the lowest turnout at 22.4%. These patterns indicate that boroughs with overwhelming Democratic registration may not necessarily produce the highest voter participation rates. Beyond, this, the Bronx voter distributions are more politically spread than any other borough. Turnout may reflect broader factors such as electoral competitiveness, and socioeconomic conditions, rather than party affiliation. It remains hard to claim for sure with only five boroughs in the sample.
 
 
 ### Columbia and Surrounding areas
 
-Guiding Question: How does voter turnout in the Assembly district around Columbia University's Morningside campus compare to turnout in areas surrouding other NYC college campuses, and what does this suggest about the interaction between civic participation and school demographic makeup?
+Guiding Question: How does voter turnout in the Assembly District surrounding Columbia University’s Morningside campus compare to turnout in districts surrounding other NYC college campuses, and what might these patterns suggest about the relationship between civic participation, higher educational institutions, and the demographic composition of neighborhoods surrounding certain schools?
 
 #### Back-to-School Ballots: Comparing Columbia’s District Turnout to Political Participation Across NYC Campuses
 ```{r, fig.width=6, fig.height=5, dpi=300, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(sf)
+library(tigris)
+library(scales)
+
+options(tigris_use_cache = TRUE, tigris_progress_bar = FALSE)
+
+ny_assembly <- state_legislative_districts("NY", house = "lower", year = 2024)
+
+boroughs <- counties("NY", cb = TRUE, year = 2024) |>
+  filter(NAME %in% c("New York", "Kings", "Queens", "Bronx", "Richmond")) |>
+  mutate(
+    BoroName = recode(
+      NAME,
+      "New York" = "Manhattan",
+      "Kings" = "Brooklyn",
+      "Richmond" = "Staten Island"
+    )
+  ) |>
+  st_transform(st_crs(ny_assembly)) |>
+  select(BoroName)
+
+assembly_turnout <- data |>
+  filter(
+    geo_level == "Assembly District",
+    year == 2024,
+    !is.na(turnout)
+  ) |>
+  group_by(geo_unit) |>
+  summarise(avg_turnout = mean(turnout), .groups = "drop") |>
+  mutate(Geo_Unit = as.character(geo_unit))
+
+assembly_map <- ny_assembly |>
+  mutate(Geo_Unit = as.character(as.numeric(SLDLST))) |>
+  left_join(assembly_turnout, by = "Geo_Unit")
+
+assembly_nyc <- st_intersection(assembly_map, boroughs) |>
+  mutate(
+    turnout_group = cut(
+      avg_turnout,
+      breaks = c(0, 0.20, 0.25, 0.30, 1),
+      labels = c("Very Low", "Low", "Moderate", "High"),
+      include.lowest = TRUE
+    )
+  )
+
+nyc_colleges <- tibble(
+  college = c(
+    "Columbia", "NYU", "City College", "Fordham",
+    "Hunter", "St. John's", "Brooklyn College", "Queens College"
+  ),
+  lon = c(-73.9619, -73.9950, -73.9500, -73.8900,
+          -73.9640, -73.7956, -73.9517, -73.8170),
+  lat = c(40.8075, 40.7300, 40.8194, 40.8600,
+          40.7680, 40.7219, 40.6318, 40.7363)
+) |>
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) |>
+  st_transform(st_crs(assembly_nyc))
+
+college_labels <- cbind(
+  nyc_colleges,
+  st_coordinates(nyc_colleges)
+)
 ggplot() +
   geom_sf(
     data = assembly_nyc,
@@ -592,6 +724,7 @@ ggplot() +
     )
   )
 ```
+Figure 8 maps 2024 voter turnout levels across New York City Assembly Districts alongside the locations of several major college campuses, with darker green districts representing higher turnout levels and lighter districts indicating lower turnout. 2024 provides the most recent information, and allows for further analysis into the demographics or each distinct. The map demonstrates that some campuses located in Manhattan, such as NYU and Hunter College, are situated within relatively high-turnout districts, while campuses in parts of Queens, Brooklyn, and the Bronx are generally located in areas that present lower- or moderate-turnout.Columbia and City College, located in Upper Manhattan, and Harlem fall near moderate- to high-turnout districts.These spatial patterns indicate that voter turnout around college campuses varies substantially across neighborhoods, although not determined by the presence of a university alone. However, turnout levels may serve as a reflection of broader borough-level differences in political engagement, and access to civic or electoral resources. Campuses located in politically active and higher-income neighborhoods may feel a stronger sense of surrounding voter mobilization, while campuses situated in more economically diverse or historically minority-filled communities may find that their neighborhoods are marked by lower levels of political participation. 
 
 #### Demographic Dependent: Comparing Demographics and Turnout Across College Campus Districts
 ```{r, message=FALSE, warning=FALSE}
@@ -675,14 +808,11 @@ college_turnout |>
   )
 ```
 
-Only 8 colleges districts
-Used 2024 data
+Figure 9 compares 2024 provides a deeper look into voter turnout across the Assembly Districts surrounding eight NYC college campuses.The highest turnout appears near Columbia, NYU, and Hunter, all above 32%, while St. John’s, Brooklyn College, and Queens College are located in lower-turnout districts below 25%. The table uses 2024 turnout data and 2024 demographic data from <a href="https://censusreporter.org/" target="_blank" rel="noopener noreferrer">Census Reporter</a>.
+The analysis includes only eight college districts, so the results should be interpreted descriptively rather than causally. Despite this, the pattern suggests that campuses located in majority-White Assembly Districts tend to be surrounded by higher-turnout areas, while campuses in districts with larger Black, Hispanic, or Asian populations tend to appear in lower-turnout areas. These differences may reflect broader inequalities socioeconomic status and access to resources. In particular, communities of color in the United States have faced historical disenfranchisement and voter suppression that may still be slightly visible in more recent voter patterns.
 
-2024 census data:
-<a href="https://censusreporter.org/" target="_blank" rel="noopener noreferrer">
-Census Reporter
-</a>
 
 ## Conclusion
 
- Would've loved to have mor insight into variables such as age and political affiliation
+This exploratory project, with data taken from NYC Open Data’s “Historical Voter Turnout” repository, demonstrates that voter turnout across New York City varies substantially by election type, borough, Assembly District, and surrounding demographic context. High-stakes elections such as presidential and general elections consistently produced the strongest participation rates, leaving those of smaller scales to typically illustrate lower turnout levels. Spatial pattern analysis further indicates that turnout variance may be associated  with broader neighborhood characteristics. Manhattan and Staten Island in particular have exhibited higher turnout levels, while several districts in the Bronx, Brooklyn, and Queens remained comparatively lower. In the future, I hope to study why these patterns arise, beyond what my current data indicates. Analyses surrounding NYC college campuses also suggested that campuses located in wealthier and majority-White districts tended be situated in higher-turnout areas than campuses located in more economically diverse, minority- filled communities.However, it is important to note several important limitations that were not discussed in the introduction. The analysis relied very heavily on descriptive, and fell short in making any causal statistical claims, particularly because some sections contained relatively small sample sizes. We cannot determine causality from a  five boroughs or eight college districts sample. The analysis also lacked insight into variables such as age, income, and gender, which would have been extremely helpful. Future research could incorporate data from multiple census sources and voter registration datasets to satisfy this curiosity of mine. I also hope to explore how school performance, and university endowments relate to the surrounding neighborhoods and their broader patterns of political participation. This project has demonstrated the importance of combining spatial analysis and demographic context  with visualization methods, thus granting us the opportunity to better understand political participation patterns within large urban environments.
+
