@@ -1,13 +1,13 @@
-# 5 NYC Restaurant Inspection Analysis
+# NYC Restaurant Inspection Analysis
 
 Charlene Shen
 
-## 5.1 Introduction
+## Introduction
 
 This project explores NYC restaurant inspection data to understand patterns in inspection outcomes. I mainly focus on inspection scores, grades, cuisine types, inspection types, and location. Since restaurant inspections are related to public health and food safety, this dataset is useful for seeing whether worse inspection outcomes are connected to restaurant characteristics or geography.
 
-## 5.2 Data
-### 5.2.1 Description
+## Data
+### Description
 
 The dataset comes from NYC restaurant inspection records. Each row represents an inspection record for a restaurant and includes information such as restaurant name, borough, cuisine type, inspection type, inspection score, grade, and location coordinates. The main variables used in this analysis are SCORE, GRADE, INSPECTION TYPE, CUISINE DESCRIPTION, BORO, Longitude, and Latitude.
 
@@ -25,9 +25,9 @@ head(df)
 
 ```
 
-### 5.2.2 Missing value analysis
+### Missing value analysis
 
-#### 5.2.2.1 Missing Values by Variable
+#### Missing Values by Variable
 
 This graph shows that missingness is not evenly distributed across variables. Grade-related fields such as GRADE and GRADE DATE have many missing values, while key identifiers like CAMIS and BORO are mostly complete.
 
@@ -43,7 +43,7 @@ ggplot(missing_count, aes(x = reorder(variable, missing), y = missing)) +
 
 ```
 
-#### 5.2.2.2 Missing Grade by Inspection Type
+#### Missing Grade by Inspection Type
 
 The missing values in GRADE do not appear to be random. Some inspection types have much higher proportions of missing grades which suggests that grades may not be assigned for certain inspection processes. This is important because later analyses using GRADE should be interpreted carefully.
 
@@ -64,7 +64,7 @@ df %>%
   theme_minimal()
 
 ```
-#### 5.2.2.3 Missing Coordinates by Borough
+#### Missing Coordinates by Borough
 
 Location coordinates are mostly complete across boroughs, so later geographic analysis is unlikely to be heavily biased by missing latitude or longitude values.
 
@@ -87,9 +87,9 @@ ggplot(coord_missing_boro, aes(x = BORO, y = n, fill = coord_missing)) +
 
 ```
 
-## 5.3 Results
+## Results
 
-### 5.3.1 Question 1: Are re-inspections associated with different inspection scores?
+### Question 1: Are re-inspections associated with different inspection scores?
 
 ```{r}
 
@@ -136,7 +136,7 @@ The summary table gives the same impression. The median score for re-inspections
 
 Based on these two outputs, re-inspections do not seem to have worse outcomes. They may even have slightly better scores, possibly because restaurants fix some problems before being inspected again. Still, this should be treated as an association rather than proof that re-inspections directly improve scores.
 
-### 5.3.2 Question 2: Do some cuisine types tend to have worse inspection outcomes?
+### Question 2: Do some cuisine types tend to have worse inspection outcomes?
 
 ```{r}
 
@@ -186,7 +186,7 @@ df |>
 ```
 However, the boxplot shows that this pattern should be interpreted carefully. Some of the higher averages seem to be influenced by extreme scores, rather than all restaurants in that cuisine group performing poorly. For example, Chinese, Spanish, and Caribbean restaurants have several high-score outliers. Because of this, it is more accurate to say that these cuisine types may show higher risk or greater variability in inspection outcomes, rather than simply concluding that they are worse overall.
 
-### 5.3.3 Question 3: Are high-score restaurants clustered differently from all inspected restaurants?
+### Question 3: Are high-score restaurants clustered differently from all inspected restaurants?
 
 ```{r}
 
@@ -273,7 +273,7 @@ The borough summary table helps check whether the map is just reflecting where t
 
 This makes the map more useful because the table compares proportions instead of only showing dense restaurant areas. Based on this sample, Brooklyn and Queens seem to have a slightly higher proportion of worse inspection outcomes. Still, I would not say that borough location directly causes higher scores. I see this more as an exploratory pattern that could be studied more carefully later.
 
-## 5.4 Conclusion
+## Conclusion
 
 Overall, the analysis suggests that restaurant inspection outcomes vary by inspection process, cuisine type, and geography. Re-inspections do not appear to have worse scores; in fact, they have slightly lower median scores in this sample. Some cuisine types have higher average scores, but the boxplots show that outliers play an important role. The geographic analysis also suggests that high-score restaurants are somewhat clustered, although this pattern partly overlaps with areas where restaurants are generally concentrated. Because this is an exploratory analysis, these results should be interpreted as associations rather than causal relationships.
 
