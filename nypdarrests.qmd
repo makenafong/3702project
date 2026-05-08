@@ -126,8 +126,7 @@ The graphs compare arrest patterns across NYC's boroughs. The left spatial graph
 
 ##### Concentration by Precinct
 
-```{r}
-#|fig-width: 12
+```{r, fig.width = 10}
 
 top_precincts_counts <- arrests |>
   count(Precinct, arrest_boro) |>
@@ -140,7 +139,7 @@ ggplot(top_precincts_counts, aes(x = count, y = fct_reorder(as.factor(Precinct),
   geom_point(size = 2.5) +
   scale_color_manual(values = c("Bronx" = "#0074D9", "Brooklyn" = "#2ECC40", 
        "Manhattan" = "#85144b", "Queens" = "#FF4136", "Staten Island" = "#FF851B")) +
-  geom_text(aes(label = count), color = "black", hjust = -0.3, size = 2.5) +
+  geom_text(aes(label = count), color = "black", hjust = -0.2, size = 2.5) +
   labs(y = "Precinct", x = "Number of Arrests", title = "Top 10 Precincts With Highest Number of Arrests",
   subtitle = "Total Number of Arrests from January 1, 2026 to March 31, 2026", color = "Borough") +
   theme_minimal() +
@@ -306,7 +305,8 @@ ggplot(race_p75, aes(y = fct_reorder(perp_race, prop), x = prop)) +
 
 As represented in the bar graph, out of the 2545 people arrested in Precinct 75, 68% were identified as Black, 18% were identified as White Hispanic, 6% were identified as Black hispanic, 4% were identified as White, 3% were identified as Asian/Pacific Islander, and less than 0% were identified as American Indian/Alaskan Native or unknown.
 
-#### What is the racial distribution of people who are arrested in the precinct with the lowesr number of arrests?
+
+#### What is the racial distribution of people who are arrested in the precinct with the lowest number of arrests?
 
 ```{r}
 data$Precinct[which.min(data$arrests)]
@@ -334,6 +334,16 @@ ggplot(race_p22, aes(y = fct_reorder(perp_race, prop), x = prop)) +
 ```
 
 As represented in the bar graph, there were a total of 19 arrests in Precinct 22. Out of those arrests, 58% were people identified as hispanics, 32% were people identified as black, and 11% were people identified as white.
+
+
+As pointed out by some of my classmates, Precinct 75 and Precinct 22 differ in several ways, including but not limited to population size, socioeconomic composition, and tourism. These differences may contribute to variation in overall arrest counts and should not be ignored when interpreting cross-precinct comparisons. However, the focus of this section is not to explain differences in total arrests, but rather to look at whether, within the population of individuals who were arrested in NYC between 1/1/26 and 3/31/26, the racial distribution of arrests is statistically independent of borough. Below is a chi-square test I ran to asses the relationship between race and borough.
+
+##### Chi-square test
+
+```{r}
+chisq.test(table(arrests$arrest_boro, arrests$perp_race))
+```
+In this chisq test of independence, there is a statistically significant association (p < 0.001) between borough and racial distribution of arrested individuals. In other words, the distribution of race among arrested individuals is not independent of the borough in which the arrest occurred. Future studies can investigate borough-level characteristics, such as population size, socioeconomic conditions, or policing patterns, to see what are strongly associated with variation in the racial distribution of arrests across boroughs.
 
 
 ### Short Summary of Findings
