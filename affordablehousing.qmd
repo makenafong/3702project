@@ -8,9 +8,9 @@ Source: https://www.nyc.gov/site/hpd/about/housing-blueprint.page
 
 ## Data
 ### Description
-This data is collected through various Housing Preservation and Development programs. Each row contains one buildings in a specific housing development or preservation project. Each column contains details about the location of the building, when construction began, details about the number of units divided by target income level, and the number of bedrooms. This data set is 8,983 rows and 41 columns. It is updated quarterly and was last updated March 20th, 2026. 
+This data is collected through various Housing Preservation and Development programs. Each row represents one building in a specific housing development or preservation project. Each column contains details about the location of the building, when construction began, details about the number of units divided by target income level, and the number of bedrooms. This data set is 8,983 rows and 41 columns. It is updated quarterly and was last updated March 20th, 2026. 
 
-This data does have duplicate buildings if it was involved in multiple projects. There are also some projects that were started to assist homeowners or special populations that are marked "CONFIDENTIAL" so we don't have all of the data for certain projects. In addition many of the projects are still in progress so there is no building completion or project completion date. 
+Buildings may appear multiple times if they were involved in multiple housing projects, meaning the project counts do not necessarily represent unique buildings. There are also some projects that were started to assist homeowners or special populations that are marked "CONFIDENTIAL" so we don't have all of the data for certain projects. In addition, many projects are still in progress and therefore do not yet have building or project completion dates. Analysis of this data was done by project/building but also by unit so some boroughs may have fewer projects overall but larger average developments. 
 
 ### Missing Value Analysis
 
@@ -22,7 +22,7 @@ df <- read_csv("data/affordablehousing.csv")
 
 ```{r}
 library(redav)
-plot_missing(df, num_char = 10, max_cols = 13, max_rows = 5)
+plot_missing(df, num_char = 4, max_cols = 13, max_rows = 5) 
 ```
 From this graph, we can see that a majority of the columns with missing data contain no information about the location of the project, but do have a date project and building completion date. This helps to verify the statement in the introduction of the data set that there are projects labeled as "CONFIDENTIAL" where details about the location of the building and any other details that could be traced back to the project itself are hidden. The next row with the most missing data is those with information about the location but no project and building completion date, which again makes sense as projects started more recently are not complete yet. 
 ```{r}
@@ -67,8 +67,7 @@ ggplot(missing_rental, aes(y = fct_reorder(Income, `Counted Units`), x = `Counte
     x = "Number of Units"
   )
 ```
-From this graph we can see that most of the rental units with missing data are "Extremely Low Income Units". In the data set introduction we know that some information was considered confidential because it was related to a "special population". We can say that the special population is likely those who have extremely low income. 
-
+From this graph we can see that most of the rental units with missing data are "Extremely Low Income Units". In the data set introduction we know that some information was considered confidential because it was related to a "special population". This suggests that projects involving extremely low income units may be more likely to be associated with confidential or protected populations. 
 
 ```{r}
 unfinished <- df |> 
@@ -94,7 +93,7 @@ ggplot(compare, aes(x = `Project Start Date`, y = prop, fill = `Completion Statu
   theme_minimal() + 
   labs(
     title = "Project Completion Status by Start Year",
-    y = "Proportion Completed",
+    y = "Proportion of Projects",
     x = "Project Start Year"
   )
 ```
@@ -111,11 +110,14 @@ points_sf <- df |>
   st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) 
 ggplot() + 
   geom_sf(data = boroughs) +
-  geom_sf(data = points_sf, size = .1) + 
-  theme_minimal()
+  geom_sf(data = points_sf, size = .1, alpha = 0.3) + 
+  theme_minimal() + 
+  labs(
+    title = "Distribution of Affordable Housing Projects Across NYC"
+)
 
 ```
-We can see there is a high concentration of affordable housing projects in the Bronx. Not too many in Lower Manhattan on the west side or by FIDI, with a higher concentration in the East Village/Stuyvesant Town area. Projects are more spread out in Queens and there are very few projects in Staten Island. Additionally there is a large concentration of projects in the North-Eastern part of Brooklyn which would make sense as that area is highly residential. 
+We can see there is a high concentration of affordable housing projects in the Bronx. Not too many in Lower Manhattan on the west side or by FIDI, with a higher concentration in the East Village/Stuyvesant Town area. Projects are more spread out in Queens and there are very few projects in Staten Island. Additionally there is a large concentration of projects in the North-Eastern part of Brooklyn which may reflect the high residential density of that area. 
 Borough Shape File Source: https://www.nyc.gov/content/planning/pages/resources/datasets/borough-boundaries
 
 ```{r}
@@ -140,7 +142,7 @@ percentages <- df |>
 compare_percent <- left_join(pop, percentages)
 gap_plot <- compare_percent |> mutate(gap = `Affordable Housing Projects` - `Borough Population`)
 
-ggplot(gap_plot, aes(x = Borough, y = gap)) +
+ggplot(gap_plot, aes(x = fct_reorder(Borough, gap, .desc = TRUE), y = gap)) +
   geom_col() +
   geom_hline(yintercept = 0) +
   theme_minimal() +
@@ -179,13 +181,23 @@ points_sf <- df |>
 ```{r}
 ggplot() + 
   geom_sf(data = boroughs) +
-  geom_sf(data = points_sf, size = 0.2) + 
-  facet_wrap(~ `income level`)
-
+  geom_sf(data = points_sf, size = 0.2, alpha = 0.3) + 
+  facet_wrap(~ `income level`) + 
+  labs(
+    title = "Affordable Housing Projects by Primary Target Income Level"
+  ) + 
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank()
+  )
 ```
-WE can see on the graph that there are generally more Low Income Units and Middle Income units. All levels of income have concentrations of projects in the Bronx and also in Northeast Brooklyn. This tells us that the location of each project was less determined by the target income level and rather by neighborhood and providing access to affordable housing for all of the different income levels. 
+We can see on the graph that there are generally more Low Income Units and Middle Income units. All levels of income have concentrations of projects in the Bronx and also in Northeast Brooklyn. This tells us that the location of each project was less determined by the target income level and rather by neighborhood and providing access to affordable housing for all of the different income levels. 
 
-One issue I did run into while creating this graph was that each project had units for multiple income levels. To create this graph, I decided to figure out what income level the majority of the units in the building were for and use that income level as the target income level associated with the building. Then I was able to create this graph. 
+One issue I did run into while creating this graph was that each project had units for multiple income levels. To create this graph, I decided to figure out what income level the majority of the units in the building were for and use that income level as the target income level associated with the building. This simplification allowed each project to be assigned a single primary income category, although many projects serve multiple income groups. Then I was able to create this graph. 
 
 ### Question 3: New Projects Over Time
 ```{r}
@@ -198,11 +210,16 @@ yearly_borough <- df |>
 ggplot(yearly_borough, aes(x = Year, y = total_units)) +
   geom_col() +
   facet_wrap(~Borough) +
-  theme_minimal()
+  theme_minimal(8) + 
+  labs(
+    title = "Affordable Housing Units Started Over Time by Borough", 
+    y = "Total Units", 
+    x = "Year"
+  )
 
 
 ```
-From this graph we can see that there was a spike in projects in the Bronx in 2020. We can also see that at the beginning of the Housing New York plan, there was primarily a focus on the Bronx, Brooklyn, and Manhattan. Eventually the focus shifted away from Brooklyn and Manhattan to Queens where there was an increase in projects started over time. Staten Island relatively has very few projects but a majority of projects in Staten Island were started in 2025. We can also see that each borough has a spike with Brooklyn in 2018, Manhattan in 2019, the Bronx in 2020, and Queens in 2021. This could represent a shift in the focus on the Housing New York plan where instead of dividing their attention across neighborhoods, it was simpler to work on a lot of projects within a certain area all at the same time. 
+From this graph we can see that there was a spike in projects in the Bronx in 2020. We can also see that at the beginning of the Housing New York plan, there was primarily a focus on the Bronx, Brooklyn, and Manhattan. Eventually the focus shifted away from Brooklyn and Manhattan to Queens where there was an increase in projects started over time. Staten Island relatively has very few projects but a majority of projects in Staten Island were started in 2025. We can also see that each borough has a spike with Brooklyn in 2018, Manhattan in 2019, the Bronx in 2020, and Queens in 2021. This pattern may reflect shifts in geographic focus within the Housing New York plan, where development efforts concentrated more heavily in certain boroughs during specific years.
 
 ## Conclusion
-Through this project, I was able to better understand when and where the city decides to begin projects focusing on providing more affordable housing options to different people in different financial situations. I was able to visualize the distribution of affordable housing projects by borough and better understand the difference between where affordable housing is needed and where it is being provided. I hope to look more into this data in the future seeing more detail about the individual neighborhoods, seeing if there is a higher concentration of new projects in boroughs with higher rates of poverty and if that is where the city first started implementing these affordable housing projects. From the information I gathered through this data, I hope to see more affordable housing options in Queens due to the large proportion of residents in Queens and the lack of projects in comparison especially because a large proprotion of people don't meet the true cost of living.
+Overall, this analysis suggests that affordable housing development in NYC is concentrated in specific boroughs and neighborhoods, while areas such as Queens may still be underserved relative to population need. Through this project, I was able to better understand when and where the city decides to begin projects focusing on providing more affordable housing options to different people in different financial situations. I was able to visualize the distribution of affordable housing projects by borough and better understand the difference between where affordable housing is needed and where it is being provided. I hope to look more into this data in the future seeing more detail about the individual neighborhoods, seeing if there is a higher concentration of new projects in boroughs with higher rates of poverty and if that is where the city first started implementing these affordable housing projects. From the information I gathered through this data, I hope to see more affordable housing options in Queens due to the large proportion of residents in Queens and the lack of projects in comparison especially because a large proportion of people don't meet the true cost of living.
