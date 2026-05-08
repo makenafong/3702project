@@ -27,29 +27,20 @@ CSV/API source:
 <a href="https://data.cityofnewyork.us/resource/rixx-fc37.csv?$limit=50000" target="_blank" rel="noopener noreferrer">
 Download the Historical Voter Turnout CSV dataset
 </a>
-```{r}
-library(quarto)
 
-quarto_render("NYC_voting_data.qmd")
-```
-
-
-```{r}
-options(tigris_progress = FALSE)
-knitr::opts_chunk$set(message = FALSE, warning = FALSE)
-```
 
 ```{r}
 library(readr)
 library(ggplot2)
 
-data <- read_csv("data/voter_turnout_data.csv",progress = FALSE)
-
+data <- read_csv("data/voter_turnout_data.csv", progress = FALSE, show_col_types = FALSE
+)
 ```
 
 ### Missing value analysis
 
 #### General Data Missingness
+
 ```{r fig.width=12, fig.height=7}
 library(dplyr)
 library(tidyverse)
@@ -81,18 +72,27 @@ plot_missing(
 Only left variables with meaningful missigness.
 
 #### Geographical Missingness
-```{r}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 library(tidyverse)
 library(sf)
 library(tigris)
 
-nybb <- st_read("data/nybb.shp")
+options(tigris_use_cache = TRUE, tigris_progress_bar = FALSE)
 
-ny_assembly <- state_legislative_districts(
-  state = "NY",
-  house = "lower",
-  year = 2024
-)
+ny_assembly <- state_legislative_districts("NY", house = "lower", year = 2024)
+
+boroughs <- counties("NY", cb = TRUE, year = 2024) |>
+  filter(NAME %in% c("New York", "Kings", "Queens", "Bronx", "Richmond")) |>
+  mutate(
+    BoroName = recode(
+      NAME,
+      "New York" = "Manhattan",
+      "Kings" = "Brooklyn",
+      "Richmond" = "Staten Island"
+    )
+  ) |>
+  st_transform(st_crs(ny_assembly)) |>
+  select(BoroName)
 
 assembly_turnout_compare <- data |>
   filter(geo_level == "Assembly District") |>
@@ -102,14 +102,13 @@ assembly_turnout_compare <- data |>
     missing_count = sum(is.na(turnout)),
     .groups = "drop"
   ) |>
-  crossing(
-    threshold = c("2+ missing values", "3+ missing values")
-  ) |>
+  crossing(threshold = c("2+ missing values", "3+ missing values")) |>
   mutate(
-    avg_turnout = case_when(
-      threshold == "2+ missing values" & missing_count >= 2 ~ NA_real_,
-      threshold == "3+ missing values" & missing_count >= 3 ~ NA_real_,
-      TRUE ~ avg_turnout
+    avg_turnout = if_else(
+      (threshold == "2+ missing values" & missing_count >= 2) |
+        (threshold == "3+ missing values" & missing_count >= 3),
+      NA_real_,
+      avg_turnout
     ),
     Geo_Unit = as.character(geo_unit)
   )
@@ -118,12 +117,7 @@ assembly_map_compare <- ny_assembly |>
   mutate(Geo_Unit = as.character(as.numeric(SLDLST))) |>
   left_join(assembly_turnout_compare, by = "Geo_Unit")
 
-nybb <- st_transform(nybb, st_crs(assembly_map_compare))
-
-assembly_nyc_compare <- st_intersection(
-  assembly_map_compare,
-  nybb |> select(BoroName)
-) |>
+assembly_nyc_compare <- st_intersection(assembly_map_compare, boroughs) |>
   filter(!is.na(threshold)) |>
   mutate(
     turnout_group = cut(
@@ -135,11 +129,7 @@ assembly_nyc_compare <- st_intersection(
   )
 
 ggplot(assembly_nyc_compare) +
-  geom_sf(
-    aes(fill = turnout_group),
-    color = "white",
-    linewidth = 0.2
-  ) +
+  geom_sf(aes(fill = turnout_group), color = "white", linewidth = 0.2) +
   facet_wrap(~ threshold, nrow = 1) +
   scale_fill_manual(
     values = c(
@@ -151,7 +141,7 @@ ggplot(assembly_nyc_compare) +
     na.value = "grey"
   ) +
   labs(
-    title = "Assembly District Turnout Under Different Missingness Thresholds (2017-2024)",
+    title = "Assembly District Turnout Under Different Missingness Thresholds (2017–2024)",
     subtitle = "Grey districts meet or exceed the missing turnout threshold",
     fill = "Turnout Level"
   ) +
@@ -173,7 +163,7 @@ Which Assembly-Districts have the highest voter turnout? Beyond this, which NYC 
 
 #### Assembly-District Level Turnouts 
 
-```{r fig.width=12, fig.height=7}
+```{r fig.width=12, fig.height=10}
 turnout_compare <- data |>
   filter(
     geo_level == "Assembly District",
@@ -233,7 +223,7 @@ ggplot(
   )
 ) +
   geom_point(
-    size = 0.8,
+    size = 3,
     alpha = 0.8
   ) +
   scale_x_continuous(
@@ -258,16 +248,18 @@ ggplot(
   ) +
   theme_bw() +
   theme(
-    axis.text.y = element_text(size = 4.5),
-    legend.position = "right",
-    plot.title = element_text(size = 15),
-    plot.subtitle = element_text(size = 12)
-  )
+  legend.position = "right",
+  axis.text.y = element_text(size = 8, face = "bold", color = "black"),
+  axis.title.y = element_text(size = 12, face = "bold"),
+  axis.text.x = element_text(size = 10),
+  plot.title = element_text(size = 16, face = "bold"),
+  plot.subtitle = element_text(size = 11)
+)
 ```
 Assembly district is nominal, as is election tpe
 
 
-##### Borough-level voter turnout and changes in relation to COVID-19
+#### Borough-level voter turnout and changes in relation to COVID-19
 ```{r}
 library(tidyverse)
 library(scales)
@@ -419,7 +411,6 @@ ggplot(
 ```{r}
 library(tidyverse)
 library(knitr)
-library(kableExtra)
 
 party_table <- tibble(
   Borough = c(
@@ -441,18 +432,8 @@ party_table |>
     ~ paste0(.x, "%")
   )) |>
   kable(
-    caption = "Party Registration Composition by Borough (2017)"
-  ) |>
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width = FALSE,
-    position = "center"
-  ) |>
-  row_spec(
-    0,
-    bold = TRUE,
-    color = "white",
-    background = "#00441B"
+    caption = "Party Registration Composition by Borough (2017)",
+    align = "lcccc"
   )
 ```
 2017 Data Link:
@@ -465,42 +446,40 @@ City Limits – Which Is the Bluest Borough?
 Guiding Question: How does voter turnout in the Assembly districts around Columbia University's Morningside campus compare to turnout in areas surrouding other NYC college campuses, and what does this suggest about the interaction between civic participation and school demographic makeup?
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 library(tidyverse)
 library(sf)
 library(tigris)
 library(scales)
 
-nybb <- st_read("data/nybb.shp")
+options(tigris_use_cache = TRUE, tigris_progress_bar = FALSE)
 
-ny_assembly <- state_legislative_districts(
-  "NY",
-  house = "lower",
-  year = 2024
-)
+ny_assembly <- state_legislative_districts("NY", house = "lower", year = 2024)
+
+boroughs <- counties("NY", cb = TRUE, year = 2024) |>
+  filter(NAME %in% c("New York", "Kings", "Queens", "Bronx", "Richmond")) |>
+  mutate(
+    BoroName = recode(
+      NAME,
+      "New York" = "Manhattan",
+      "Kings" = "Brooklyn",
+      "Richmond" = "Staten Island"
+    )
+  ) |>
+  st_transform(st_crs(ny_assembly)) |>
+  select(BoroName)
 
 assembly_turnout <- data |>
-  filter(
-    geo_level == "Assembly District",
-    !is.na(turnout)
-  ) |>
+  filter(geo_level == "Assembly District", !is.na(turnout)) |>
   group_by(geo_unit) |>
-  summarise(
-    avg_turnout = mean(turnout),
-    .groups = "drop"
-  ) |>
+  summarise(avg_turnout = mean(turnout), .groups = "drop") |>
   mutate(Geo_Unit = as.character(geo_unit))
 
 assembly_map <- ny_assembly |>
   mutate(Geo_Unit = as.character(as.numeric(SLDLST))) |>
   left_join(assembly_turnout, by = "Geo_Unit")
 
-nybb <- st_transform(nybb, st_crs(assembly_map))
-
-assembly_nyc <- st_intersection(
-  assembly_map,
-  nybb |> select(BoroName)
-) |>
+assembly_nyc <- st_intersection(assembly_map, boroughs) |>
   mutate(
     turnout_group = cut(
       avg_turnout,
@@ -512,19 +491,14 @@ assembly_nyc <- st_intersection(
 
 nyc_colleges <- tibble(
   college = c(
-    "Columbia",
-    "NYU",
-    "City College",
-    "Fordham",
-    "Hunter",
-    "St. John's",
-    "Brooklyn College",
-    "Queens College"
+    "Columbia", "NYU", "City College", "Fordham",
+    "Hunter", "St. John's", "Brooklyn College", "Queens College"
   ),
-  lon = c( -73.9619, -73.9950, -73.9500, -73.8900, -73.9640, -73.7956, -73.9517,
-    -73.8170),
-  lat = c(40.8075, 40.7300, 40.8194, 40.8600, 40.7680, 40.7219, 40.6318,
-    40.7363)) |>
+  lon = c(-73.9619, -73.9950, -73.9500, -73.8900,
+          -73.9640, -73.7956, -73.9517, -73.8170),
+  lat = c(40.8075, 40.7300, 40.8194, 40.8600,
+          40.7680, 40.7219, 40.6318, 40.7363)
+) |>
   st_as_sf(coords = c("lon", "lat"), crs = 4326) |>
   st_transform(st_crs(assembly_nyc))
 
@@ -543,18 +517,18 @@ ggplot() +
   geom_sf(
     data = nyc_colleges,
     color = "black",
-    size = 2
+    size = 1.5
   ) +
   geom_label(
-  data = college_labels,
-  aes(X, Y, label = college),
-  size = 2,
-  nudge_x = 0.015,
-  linewidth = 0.2,
-  label.padding = unit(0.1, "lines"),
-  fill = "white",
-  fontface = "bold"
-) +
+    data = college_labels,
+    aes(X, Y, label = college),
+    size = 2,
+    nudge_x = 0.015,
+    linewidth = 0.2,
+    label.padding = unit(0.1, "lines"),
+    fill = "white",
+    fontface = "bold"
+  ) +
   scale_fill_manual(
     values = c(
       "Very Low" = "#E5F5E0",
@@ -573,28 +547,23 @@ ggplot() +
 ```
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE, results='hide'}
 library(tidyverse)
 library(sf)
 library(tigris)
 library(scales)
 library(knitr)
-library(kableExtra)
+
+options(tigris_use_cache = TRUE, tigris_progress_bar = FALSE)
+
+ny_assembly <- state_legislative_districts("NY", house = "lower", year = 2024)
 
 assembly_turnout <- data |>
-  filter(
-    geo_level == "Assembly District",
-    year == 2024,
-    !is.na(turnout)
-  ) |>
+  filter(geo_level == "Assembly District", year == 2024, !is.na(turnout)) |>
   group_by(geo_unit) |>
-  summarise(
-    avg_turnout = mean(turnout),
-    .groups = "drop"
-  ) |>
-  mutate(
-    geo_unit = as.character(geo_unit)
-  )
+  summarise(avg_turnout = mean(turnout), .groups = "drop") |>
+  mutate(geo_unit = as.character(geo_unit))
+
 assembly_map <- ny_assembly |>
   mutate(geo_unit = as.character(as.numeric(SLDLST))) |>
   left_join(assembly_turnout, by = "geo_unit")
@@ -623,15 +592,23 @@ college_turnout <- st_join(nyc_colleges, assembly_map) |>
       assembly_district == "27" ~ "White (37.6%)",
       assembly_district == "25" ~ "Asian (55.3%)",
       assembly_district == "78" ~ "Hispanic (70.3%)",
-      TRUE ~ NA_character_
+      TRUE ~ "Not listed"
     ),
     turnout_numeric = avg_turnout,
     avg_turnout = percent(avg_turnout, accuracy = 0.1)
   ) |>
   arrange(desc(turnout_numeric))
 
-college_turnout |>
+college_turnout <- college_turnout |>
   select(-turnout_numeric) |>
+  rename(
+    College = college,
+    `Assembly District` = assembly_district,
+    `Average Turnout` = avg_turnout,
+    `Largest Demographic` = largest_demographic
+  )
+
+college_turnout |>
   kable(
     col.names = c(
       "College",
@@ -639,15 +616,9 @@ college_turnout |>
       "Average Turnout",
       "Largest Demographic"
     ),
-    caption = "Average 2024 Voter Turnout by College Assembly District"
-  ) |>
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width = FALSE,
-    position = "center"
-  ) |>
-  row_spec(0, bold = TRUE, color = "white", background = "#00441B") |>
-  column_spec(3, background = "#A1D99B")
+    caption = "Average 2024 Voter Turnout by College Assembly District",
+    align = "lccc"
+  )
 ```
 
 Used 2024 data
