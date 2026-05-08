@@ -717,7 +717,6 @@ ggplot() +
     size = 2,
     nudge_x = 0.015,
     linewidth = 0.2,
-    label.padding = unit(0.1, "lines"),
     fill = "white",
     fontface = "bold"
   ) +
