@@ -187,7 +187,6 @@ ggplot(assembly_nyc_compare) +
     strip.text = element_text(size = 12, face = "bold"),
     plot.caption = element_text(
       hjust = 1,
-      face = "bold",
       size = 6
     )
   )
@@ -715,7 +714,6 @@ ggplot() +
     data = college_labels,
     aes(X, Y, label = college),
     size = 2,
-    nudge_x = 0.015,
     linewidth = 0.2,
     fill = "white",
     fontface = "bold"
