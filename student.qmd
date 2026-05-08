@@ -98,9 +98,22 @@ head(student_clean)
 
 ### Description
 
-The data come from the 2021 Public Data File -Student (https://data.cityofnewyork.us/Education/2021-Public-Data-File-Student/gdx6-nrns/about_data) on NYC Open Data, published by the New York City Department of Education. The underlying survey was administered to students in grades 6-12 across NYC public schools in 2021. For privacy reasons, the published public dataset aggregates individual responses to the school level and reports, for each survey question, the percentage of respondents who selected each response category at each school. The dataset contains 1077 schools (rows) and 133 columns. The first three columns identify the school, including a District Borough Number (DBN, e.g., 01M034), the school name, and the survey response rate. The DBN encodes the school’s district (the first two characters) and borough (third character: M for Manhattan, X for Bronx, K for Brooklyn, Q for Queens, and R for Staten Island), which we will use for geographic analysis later in this chapter. The remaining 130 columns hold 65 survey questions, each split across two columns reporting the percentage of students at the “negative pole” (e.g., Strongly Disagree / Disagree) and the “positive pole” (e.g., Strongly Agree / Agree) on the response scale. The dataset is updated and published annually; I chose the 2021 dataset because it is the most recent year available on NYC Open Data.
+The data come from the [2021 Public Data File -Student](https://data.cityofnewyork.us/Education/2021-Public-Data-File-Student/gdx6-nrns/about_data) on NYC Open Data, published by the New York City Department of Education. The underlying survey was administered to students in grades 6-12 across NYC public schools in 2021. For privacy reasons, the published public dataset aggregates individual responses to the school level and reports, for each survey question, the percentage of respondents who selected each response category at each school. The dataset contains 1077 schools (rows) and 133 columns. The first three columns identify the school, including a District Borough Number (DBN, e.g., 01M034), the school name, and the survey response rate. The DBN encodes the school’s district (the first two characters) and borough (third character: M for Manhattan, X for Bronx, K for Brooklyn, Q for Queens, and R for Staten Island), which we will use for geographic analysis later in this chapter. The remaining 130 columns hold 65 survey questions, each split across two columns reporting the percentage of students at the “negative pole” (e.g., Strongly Disagree / Disagree) and the “positive pole” (e.g., Strongly Agree / Agree) on the response scale. The dataset is updated and published annually; I chose the 2021 dataset because it is the most recent year available on NYC Open Data.
 
-There are two details about the question columns that are worth flagging. One is that questions q50-q56 are negative framed, asking about bullying, harassment, drug use, and gang activity, so high “positive pole” percentages on these items indicate less supportive learning environments. The other note here is that grades restrict two question blocks: q57-q58 (high school application support) are asked only of grades 6-8, and q59-q65 (college and career readiness) are asked only for grades 9-12; we will analyze the structural pattern of such missing values in the next section.
+For the convenience of data analysis and interpretation, I grouped the 65 questions into nine topics according to [Framework & School Survey Scoring
+Technical Guide | 2021](https://panorama-www.s3.amazonaws.com/clients/nycdoe/Framework%20&%20School%20Survey%20Scoring%20Technical%20Guide%202021%20Final.pdf), an explanation of the survey published by the New York City Department of Education. Please note that, since not all questions from the student survey are included in the guide, I manually categorize some of the survey questions. The nine topics are:
+
+1. Diversity, Equity, & Inclusion (DEI)
+2. Emotional Well-Being
+3. Course Clarity
+4. Personal Attention and Support
+5. Academic Press
+6. Student-Teacher Trust
+7. Safety
+8. Preventing Bullying
+9. Guidance
+
+There are three details about the dataset that are worth flagging. First, the surveys were completed in 2021, during the pandemic school year, so class formats were unusual, mainly remote or hybrid, so students were not exposed to the usual school climate. Second, questions q14-16 and q50-q56 are negatively framed, asking about negative emotions and illegal activities; therefore, I reverse-coded these items so that higher percentages consistently indicate better learning environments across the dataset. Third, grades restrict two question blocks: q57-q58 (high school application support) are asked only of grades 6-8, and q59-q65 (college and career readiness) are asked only for grades 9-12; we will analyze the structural pattern of such missing values in the next section.
 
 ### Missing value analysis
 
@@ -147,7 +160,7 @@ schools_na <- student_clean |>
 schools_na
 ```
 
-As expected, we found that 46 schools failed to submit their responses. Now, let's remove these schools from our cleaned dataset to prevent noise. Then, we will re-examine the missing value using the bar chart.
+As expected, we found that 46 schools failed to submit their responses. Now, let's remove these schools from our cleaned dataset to reduce noise, but we should be aware that this removal could introduce bias. Then, we will re-examine the missing value using the bar chart.
 
 ```{r}
 student_clean <- student_clean |>
@@ -368,9 +381,7 @@ The scatterplot shows essentially no relationship between a school's survey resp
 
 ## Conclusion
 
-The exploration of the 2021 Public Data File -Student reveals three main takeaways. First, NYC public school students generally perceived their schools as inclusive and supportive but felt notably less engaged academically and emotionally, which could be due to remote classes during the pandemic. For the two lowest rated topics, "Academic Press" and "Emotional Well-Being", there are significant intragroup differences: students felt that they were learning but not being challenged, and felt happy and safe but also bored and stressed. Second, although the five boroughs differ in level, especially that Manhattan schools rate consistently most positively across nearly every topic, all boroughs present a similar shape on the topics, with the same topics ranking as the highest or lowest everywhere; the results indicate that NYC student perceptions of school climate are city-wide instead of borough-specific. Third, there is no significant correlation between response rate and climate score, suggesting that the above patterns are not influenced by who chose to respond to the surveys.
-
-There are two main limitations for the current analysis. First, the surveys were completed in 2021, during the pandemic school year, so class formats were unusual, mainly remote or hybrid, so students were not exposed to the usual school climate. Second, 46 schools failed to submit any responses, so they were removed from the dataset, potentially leading to biased results.
+The exploration of the [2021 Public Data File -Student](https://data.cityofnewyork.us/Education/2021-Public-Data-File-Student/gdx6-nrns/about_data) reveals three main takeaways. First, NYC public school students generally perceived their schools as inclusive and supportive but felt notably less engaged academically and emotionally. Second, although the five boroughs differ in level, all boroughs share a similar shape across the topics, indicating that NYC students' perceptions of school climate are city-wide rather than borough-specific. Third, there is no significant correlation between response rate and climate score, suggesting that the above patterns are not influenced by who chose to respond to the surveys.
 
 For future studies, it would be interesting to combine datasets from pre- and post-pandemic years to assess whether there are any pandemic-year-specific temporal patterns. Another future study that can extend the current findings is to include schools' annual funding to examine whether school climate is influenced by financial resources, as we assumed from Question #2.
 
