@@ -8,7 +8,7 @@ Homelessness remains one of the most pressing social and administrative challeng
 ## Data
 
 ### Description
-The data is provided by the **New York City Department of Homeless Services(DHS)** and represents an official daily census of families and individuals residing within the city's shelter system. The dataset is **updated daily** on the NYC Open Data portal. As of the latest records used in this analysis, the dataset contains **13 columns** and over 1**800 rows**, with each row representing one Date of Census. The key variables include the **Total Individuals in Shelter** (the sum of all Adults and Children in the system) **and Demographic Breakdowns** such as Single Adult Men/Women and Families with Children. The dataset used for this study begins on March 1, 2021 and continues through 2026. 
+The data is provided by the **New York City Department of Homeless Services(DHS)** and represents an official daily census of families and individuals residing within the city's shelter system. The dataset is **updated daily** on the NYC Open Data portal. As of the latest records used in this analysis, the dataset contains **13 columns** and over 1**800 rows**, with each row representing one Date of Census. The key variables include the **Total Individuals in Shelter** (the sum of all Adults and Children in the system) **and Demographic Breakdowns** such as Single Adult Men/Women and Families with Children. The dataset used for this study begins on March 1, 2021, and continues through 2026. 
 
 **Dataset Link:** [DHS Daily Report- NYC Open Data](https://data.cityofnewyork.us/Social-Services/DHS-Daily-Report/k46n-sa2m/about_data)[ ](https://data.cityofnewyork.us/Social-Services/DHS-Daily-Report/k46n-sa2m/about_data)
 
@@ -52,7 +52,7 @@ vis_miss(df) +
   coord_flip() 
 ```
 
-***Graph 2*** : A variable-by-variable check further confirms that every key metric has **zero missing values.** This level of integrity allow us to trust that the population totals are not being skewed by under-reporting in any specific demographic group:
+***Graph 2*** : A variable-by-variable check further confirms that every key metric has **zero missing values.** This level of integrity allows us to trust that the population totals are not being skewed by under-reporting in any specific demographic group:
 ```{r}
 #| message: false
 #| warning: false
@@ -64,7 +64,7 @@ gg_miss_var(df) +
        ylim(0,10)
 ```
 
-**Summary of patterns:** The analysis reveals a complete case structure, with zero missing values identified across the 1800+ observations. This perfect completeness is likely due to the data nature of the data: as an official daily census, each entry is a finalized, aggregated total for the entire shelter system, rather than raw survey data that might contain human error or omissions.
+**Summary of patterns:** The analysis reveals a complete case structure, with zero missing values identified across the 1800+ observations. This perfect completeness is likely due to the nature of the data: as an official daily census, each entry is a finalized, aggregated total for the entire shelter system, rather than raw survey data that might contain human error or omissions.
 
 
 ## Results
@@ -98,7 +98,7 @@ ggplot(df, aes(x = date_of_census ,
 After a period of relative stability in 2021, there is a massive surge starting in late 2022 that continues into 2026, with the population nearly doubling \~ from **45,000 to over 80,000** individuals. This rapid growth suggests that the pace of people entering the system significantly exceeds the city's ability to transition them into permanent housing.
 
 #### Distribution of the Shelter Population by Year
-To see how the daily census has changed overtime, we can also look at the distribution of the population for each year: 
+To see how the daily census has changed over time, we can also look at the distribution of the population for each year: 
 ```{r}
 #| message: false
 #| warning: false
@@ -119,14 +119,14 @@ df |>
   
   theme_ridges()
 ```
-This ridgeline plot reveals that in 2021, the system was consistently centered around 45000 people. However, by 2024 and 2025, these peaks have flattened and migrated significantly to the right,indicating that a much larger population has become the standard. Essentially, the rightward shift of the surves prove the system is operating a completely different scale than it was a few years ago.
+This ridgeline plot reveals that in 2021, the system was consistently centered around 45000 people. However, by 2024 and 2025, these peaks have flattened and migrated significantly to the right, indicating that a much larger population has become the standard. Essentially, the rightward shift of the surveys proves the system is operating on a completely different scale than it was a few years ago.
 
-After some research, I found out that the dramatic center of gravity shift in the preceding graphs is not random, it is caused by an external humanitarian crisis. [According to this article](https://nypost.com/2023/01/31/migrant-crisis-sparked-unprecedented-burden-on-shelters/), the unprecedented census surge starting in 2023 coincides with **the arrival of asylum seekers in New York City**. This crisis was compounded by some preexisting factors: a lack of affordable housing, the expiration of pandemic-era protections and rising evictions.
+After some research, I found out that the dramatic center of gravity shift in the preceding graphs is not random; it is caused by an external humanitarian crisis. [According to this article](https://nypost.com/2023/01/31/migrant-crisis-sparked-unprecedented-burden-on-shelters/), the unprecedented census surge starting in 2023 coincides with **the arrival of asylum seekers in New York City**. This crisis was compounded by some preexisting factors: a lack of affordable housing, the expiration of pandemic-era protections, and rising evictions.
 
 
-### Question 2: How has the composition of the Shelter System changed over the last five years ?
+### Question 2: How has the composition of the Shelter System changed over the last five years?
 #### Shifts in Household Types
-By breaking the population into three distinct demographic groups **(Single Adults, Families with Children and Adult-Only Families)**, we can see how the fundamental composition of NYC's shelters has transformed over the last five years:
+By breaking the population into three distinct demographic groups **(Single Adults, Families with Children, and Adult-Only Families)**, we can see how the fundamental composition of NYC's shelters has transformed over the last five years:
 ```{r}
 #| message: false
 #| warning: false
@@ -171,7 +171,7 @@ ggplot(df_total_comp, aes(x = date_of_census, y = Count, fill = Group)) +
 This stacked area chart reveals a major shift in who uses NYC shelters. In 2021, the numbers were fairly stable between **Single Adults** and **Families with Children**. However,  starting in late 2022, the **Families with Children** exploded, quickly becoming the largest group and pushing the total population past 80,000. While **Adult-Only Families** stayed small and steady, the overall data shows that the crisis has shifted from an individual issue into a massive humanitarian challenge for families, requiring a whole new set of city resources.
 
 #### Growth Rates by Demographic Group
-While the daily census tracks the current population, indexing the data allows us to measure the speed of the crisis. By setting every demographic group to a baseline of 100 at the start of 2021, this visualization identifies which group have experienced the most explosive rates of growth over the last five years: 
+While the daily census tracks the current population, indexing the data allows us to measure the speed of the crisis. By setting every demographic group to a baseline of 100 at the start of 2021, this visualization identifies which group has experienced the most explosive rates of growth over the last five years: 
 ```{r}
 #| message: false
 #| warning: false
@@ -225,7 +225,7 @@ ggplot(df_final_growth, aes(x = fct_reorder(Demographic, Growth, .desc = TRUE),
   y = "Indexed Growth(100 Baseline)") +
   theme_classic()
 ```
-The number of **Parents** and **Children**  have skyrocketed, nearly doubling compared to **Single Adults** and **Adult-Only Families** who have grown at a much slower pace. This ranking proves that the current situation is fundamentally a family and youth crisis. The city's primary challenge has shifted toward housing thousands of new family households rather than just focusing on individuals adults.
+The number of **Parents** and **Children** has skyrocketed, nearly doubling compared to **Single Adults** and **Adult-Only Families**, who have grown at a much slower pace. This ranking proves that the current situation is fundamentally a family and youth crisis. The city's primary challenge has shifted toward housing thousands of new family households rather than just focusing on individual adults.
 
 #### Trends in Single Adult Residency
 While the growth of family units has redefined the shelter system, the population of single individuals remains a substantial and distinct demographic. By isolating **Single Men** and **Single Women** into a faceted yearly view, we can track how the gender gap has evolved alongside the broader crisis:
@@ -269,7 +269,7 @@ ggplot(df_gender, aes(x = date_of_census, y = Count, color = Gender)) +
     strip.background = element_rect(fill = "grey95"),
     axis.text.x = element_blank())
 ```
-The faceted lines show that while **Single Men** consistently outnumber **Single Women** in the shelter system, both groups follow nearly identical trajectories. The gap between the two lines remains constant even through the spikes of 2023 and into 2026. This pattern suggests that the factors driving single individuals into the shelter system (such as the rising cost of housing or unemployment) are affecting both genders simultaneously rather than impacting one group disproportionaetely.
+The faceted lines show that while **Single Men** consistently outnumber **Single Women** in the shelter system, both groups follow nearly identical trajectories. The gap between the two lines remains constant even through the spikes of 2023 and into 2026. This pattern suggests that the factors driving single individuals into the shelter system (such as the rising cost of housing or unemployment) are affecting both genders simultaneously rather than impacting one group disproportionately.
 
 
 ### Question 3: Does weather impact shelter occupancy?
@@ -323,7 +323,7 @@ Using boxplots to track seasonal trends confirms that **Winter (Dec-Feb)** remai
 [February 22-23, 2026 Blizzard ](https://www.weather.gov/okx/20260222_23#:~:text=The%20National%20Weather%20Service%20in,%2C%20Southern%20New%20Haven%2C%20CT%2C)
  
 I vividly remember the major blizzards earlier this year, when my classes moved online on **January 26** and **February 23**. These **snow days** provide the perfect opportunity to evaluate the real-world effectiveness of the city's **Code Blue** emergency response.
-By isolating these specific window (January 22-29 and February 19-26), we can visualize whether the shelter population increased as outreach teams moved homeless people off the streets and into safety during extreme weather: 
+By isolating these specific windows (January 22-29 and February 19-26), we can visualize whether the shelter population increased as outreach teams moved homeless people off the streets and into safety during extreme weather: 
 ```{r}
 #| message: false
 #| warning: false
@@ -365,7 +365,7 @@ ggplot(blizzard_data, aes(x = date_of_census, y= total_individuals_in_shelter, g
         strip.text = element_text(face ="bold", size = 12),
         axis.text.x = element_text(angle = 45, hjust =1))
 ```
-This analysis  reveals the city's emergency response in action. In both January and February, the census spikes exactly as the blizzards hit, confirming hat emergency outreach successfully transitions people off the streets during life-threatening cold. The subsequent drop-offs shows the system returning to its baseline, confirming that DHS can effectively scale capacity to meet immediate crisis needs.The lower peak in February compare to January may even suggest that some individuals transitioned from emergency beds into more permanent housing placements as the winter progressed.
+This analysis reveals the city's emergency response in action. In both January and February, the census spikes exactly as the blizzards hit, confirming that emergency outreach successfully transitions people off the streets during a life-threatening cold. The subsequent drop-offs show the system returning to its baseline, confirming that DHS can effectively scale capacity to meet immediate crisis needs. The lower peak in February compared to January may even suggest that some individuals transitioned from emergency beds into more permanent housing placements as the winter progressed.
 
 ### The 24-Hour Difference 
 As of today, one of the most important metrics is to find what happened in the last 24 hours. By isolating today and yesterday, this tiny window captures the reality of New Yorkers moving through the system right now as we transition into another season:
@@ -406,11 +406,11 @@ status_word <- ifelse(diff_val >= 0, "an increase of", "a decrease of")
 cat("Daily Census Update:", format(latest$date_of_census[2], "%B %d, %Y"), "\n",
     "The system recorded", status_word, abs(diff_val), "individuals since yesterday.")
 ```
-This is a real-time calculation to understand the day-to-day pressure on city resources. The resulting number varies daily, revealing whether the census is currently  growing, shrinking, or staying stable. This snapshot provides a high-frequency  look at the operational heartbeat of the NYC shelter system.
+This is a real-time calculation to understand the day-to-day pressure on city resources. The resulting number varies daily, revealing whether the census is currently growing, shrinking, or staying stable. This snapshot provides a high-frequency look at the operational heartbeat of the NYC shelter system.
 
 
-***Short summary of the most revealing findings of my analysis*** : The most striking discovery in this analysis is the **Demographic flip**. While the shelter system was historically dominated by **single individuals**, the current crisis is almost entirely driven by **families with children.** Since late 2022, this group has seen explosive growth, nearly doubling in size. Furthermore, my analysis of the **2026 Snow Days** proves that the city's **Code Blue** emergency response is highly effective at transitioning people into safety during life-threatening cold, even though the system remains at a high-capacity baseline regardless of the season.
+***Summary of the most revealing findings of my analysis***: The most striking discovery in this analysis is the **Demographic flip**. While the shelter system was historically dominated by **single individuals**, the current crisis is almost entirely driven by **families with children.** Since late 2022, this group has seen explosive growth, nearly doubling in size. Furthermore, my analysis of the **2026 Snow Days** proves that the city's **Code Blue** emergency response is highly effective at transitioning people into safety during life-threatening cold, even though the system remains at a high-capacity baseline regardless of the season.
 
 
 ## Conclusion
-The main takeaway from this exploration is that NYC's shelter system has evolved from an individual housing problem into a massive humanitarian challenge for families. The unprecedented  **surge in 2023** indicates that the city can no longer rely on old strategies, it requires resources specifically tailored for **households with children**, rather than just beds for **single adults.**This analysis has its limits; because we are working with high-frequency daily aggregates, the data is **numbers-heavy** but **identity-light**. For instance, while we know the total number of children, the dataset does not provide a gender breakdown for minors, making it impossible to see if the surge affects boys and girls differently. Additionally, it is difficult to calculate an accurate average of children per family unit without knowing the specific makeup of every household. The current reporting also groups all parents and caregivers into a single "Guardian" category, which prevented me from isolating the specific trends for single mothers versus single fathers. Beyond the raw totals, the data leaves me with many unanswered questions about the true makeup of these households: is a family typically a father and his children or a mother? , or perhaps two children being cared by an aunt? When we look at **adult-only families**, are we seeing couples or is it a group of cousins or sibling sticking together for survival?. I found myself wanting to go deeper into these relationships to understand the human story behind the numbers, but the current dataset keeps these family bonds invisible. For future research I would love to see data on **Length of Stay** to understand how quickly people are actually exiting the system. Ultimately, this project taught me that homeless is season-proof; whether it's January Blizzard or a mild May morning, the pressure on NYC's resources is a 24-hour reality that require constant intervention. 
+The main takeaway from this exploration is that NYC's shelter system has evolved from an individual housing problem into a massive humanitarian challenge for families. The unprecedented  **surge in 2023** indicates that the city can no longer rely on old strategies; it requires resources specifically tailored for **households with children**, rather than just beds for **single adults. ** This analysis has its limits; because we are working with high-frequency daily aggregates, the data is **numbers-heavy** but **identity-light**. For instance, while we know the total number of children, the dataset does not provide a gender breakdown for minors, making it impossible to see if the surge affects boys and girls differently. Additionally, it is difficult to calculate an accurate average of children per family unit without knowing the specific makeup of every household. The current reporting also groups all parents and caregivers into a single "Guardian" category, which prevented me from isolating the specific trends for single mothers versus single fathers. Beyond the raw totals, the data leaves me with many unanswered questions about the true makeup of these households: Is a family typically a father and his children or a mother? , or perhaps two children being cared for by an aunt? When we look at **adult-only families**, are we seeing couples or is it a group of cousins or siblings sticking together for survival?. I found myself wanting to go deeper into these relationships to understand the human story behind the numbers, but the current dataset keeps these family bonds invisible. For future research, I would love to see data on **Length of Stay** to understand how quickly people are actually exiting the system. Ultimately, this project taught me that homelessness is season-proof; whether it's a January Blizzard or a mild May morning, the pressure on NYC's resources is a 24-hour reality that requires constant intervention. 
